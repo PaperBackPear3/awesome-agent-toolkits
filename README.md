@@ -44,14 +44,14 @@ Copy a skill into your agent's skill directory:
 cp -r skills/devops/aws-eks-updater ~/.agents/skills/
 ```
 
-Or point your agent at the MCP server for dynamic skill discovery:
+Or point your agent at the MCP server to augment its harness with persistent notes, todos, timers, and a cross-project registry:
 
 ```json
 {
   "mcpServers": {
-    "skills": {
+    "agent-toolkit": {
       "command": "uvx",
-      "args": ["awesome-agent-toolkits-mcp-server@latest"]
+      "args": ["agent-toolkit-mcp-server@latest"]
     }
   }
 }
@@ -75,7 +75,16 @@ Or point your agent at the MCP server for dynamic skill discovery:
 
 ### MCP Server
 
-The MCP server (published as `awesome-agent-toolkits-mcp-server` via uvx) exposes skills as tools, resources, and prompts — making them discoverable by any MCP-compatible agent without manual installation.
+The MCP server (published as `agent-toolkit-mcp-server` via uvx) augments an agent's harness with capabilities Claude Code does not provide natively:
+
+| Area         | What it adds                                                                    | Tools |
+| ------------ | ------------------------------------------------------------------------------- | ----- |
+| **Notes**    | Persistent, named markdown notes (plans, designs, scratch) with tags & revisions | 15    |
+| **Todos**    | Cross-session todo lists, optionally project-scoped, with blockers              | 11    |
+| **Timers**   | Durable scheduled/recurring wake-ups; agents poll fired events                  | 7     |
+| **Projects** | Cross-project registry — register repos/folders by name and reference them anywhere | 6     |
+
+All state lives under `~/.agent-toolkit/` (overridable via `AGENT_TOOLKIT_HOME`). See [`mcp-server/README.md`](mcp-server/README.md) for the full tool index and storage layout, and [`docs/CLAUDE_CODE_CAPABILITIES.md`](docs/CLAUDE_CODE_CAPABILITIES.md) for what's already built into Claude Code (so you know what this MCP intentionally does not duplicate).
 
 ## Repository Structure
 
@@ -103,7 +112,8 @@ docs/                   # Documentation
 | [Contributing: Add New Stuff](docs/CONTRIBUTING.md) | How to add skills, tools, plugins, rules           |
 | [Quick Reference Guide](docs/GUIDE.md)              | Architecture, concepts, conventions                |
 | [Best Practices](docs/BEST_PRACTICES.md)            | MCP vs Agents vs Tools vs Skills deep-dive         |
-| [MCP Server](mcp-server/README.md)                  | Server setup and available tools                   |
+| [MCP Server](mcp-server/README.md)                  | Server setup, storage layout, and available tools  |
+| [Claude Code Capabilities](docs/CLAUDE_CODE_CAPABILITIES.md) | Reference of built-in harness tools (and gaps the MCP fills) |
 | [Agent Rules](rules/devops-agent-rules.md)          | Behavioral guardrails                              |
 
 ## License

@@ -1,180 +1,77 @@
-# Skills MCP Server
+# agent-toolkit-mcp-server
 
-An MCP (Model Context Protocol) server that exposes skill tools as MCP tools, resources, and prompts. It auto-discovers skills from any domain (devops, security, data, etc.) and makes their tools available to any MCP-compatible agent.
+A user-facing MCP server that augments Claude Code's built-in harness with four
+capability areas the harness does not have natively:
 
-## Prerequisites
+- **Notes** — persistent, named markdown notes (plans, designs, scratch)
+- **Todos** — persistent todos, cross-session, optionally project-scoped
+- **Timers** — durable scheduled wake-ups (file-based; poll fired events)
+- **Projects** — a cross-project registry of repos/folders by name
 
-- Python 3.10+
-- [uv](https://docs.astral.sh/uv/) (for `uvx` usage)
-- Domain-specific CLIs as needed by individual skills (e.g., `aws`, `az`, `kubectl`, `helm`, `terraform`)
+## Install / run
 
-## Installation
+```sh
+uvx agent-toolkit-mcp-server
+```
 
-### Option 1: uvx (Recommended)
+Or register it as an MCP server in your Claude Code config.
 
-No install needed — `uvx` runs the server directly from PyPI:
+## Storage layout
+
+All state lives under a single directory, configurable via `AGENT_TOOLKIT_HOME`
+(default `~/.agent-toolkit/`):
+
+```
+~/.agent-toolkit/
+├── projects.json
+├── notes/
+│   ├── _global/
+│   └── <project>/
+├── todos/
+│   ├── _global/
+│   └── <project>/
+└── timers/
+    ├── pending.json
+    └── fired/
+```
+
+Notes are markdown files with YAML frontmatter (`tags`, `revision`, `archived`,
+`created`, `updated`). Mutating tools bump `revision`; pass `expected_revision`
+to detect concurrent writes.
+
+Project scope: omit `project` (or pass an empty string) for the global scope.
+Otherwise the value must match a name registered via `project_register`.
+
+## Tool index
+
+### Notes (15)
+`note_list`, `note_tags_list`, `note_read`, `note_find`, `note_tail`,
+`note_write`, `note_rename`, `note_add_tags`, `note_remove_tags`, `note_append`,
+`note_append_section`, `note_edit`, `note_clear`, `note_delete`, `note_archive`
+
+### Todos (11)
+`todo_create`, `todo_list`, `todo_get`, `todo_update`, `todo_complete`,
+`todo_delete`, `todo_add_tag`, `todo_remove_tag`, `todo_tags_list`,
+`todo_add_blocker`, `todo_remove_blocker`
+
+### Timers (7)
+`timer_set`, `timer_list`, `timer_cancel`, `timer_pause`, `timer_resume`,
+`timer_fired`, `timer_ack`
+
+A daemon thread inside the server wakes every 5 seconds, flips due timers into
+`timers/fired/`, and re-arms recurring ones.
+
+### Projects (6)
+`project_register`, `project_list`, `project_get`, `project_update`,
+`project_remove`, `project_resolve`
+
+## Errors
+
+All tool errors are returned as JSON, never raised:
 
 ```json
-{
-  "mcpServers": {
-    "awesome-agent-toolkits-mcp": {
-      "command": "uvx",
-      "args": ["awesome-agent-toolkits-mcp-server@latest"]
-    }
-  }
-}
+{ "error": true, "code": "not_found", "message": "..." }
 ```
 
-Pass `--skills-dir` to point at your skills directory:
-
-```json
-{
-  "mcpServers": {
-    "awesome-agent-toolkits-mcp": {
-      "command": "uvx",
-      "args": ["awesome-agent-toolkits-mcp-server@latest", "--skills-dir", "/path/to/skills"]
-    }
-  }
-}
-```
-
-### Option 2: Docker (Local Development)
-
-From the repo root:
-
-```bash
-docker compose up mcp-server
-```
-
-This builds the server image and mounts `./skills` as a read-only volume. Configure your agent to use it with stdio transport.
-
-### Option 3: Run from source
-
-```bash
-cd mcp-server
-pip install -r requirements.txt
-python server.py
-```
-
-Or with a custom skills directory:
-
-```bash
-python server.py --skills-dir /path/to/skills
-```
-
-The `SKILLS_DIR` environment variable is also supported.
-
-The server uses **stdio transport** (stdin/stdout) — it's designed to be launched by an MCP client.
-
-## Configuration Examples
-
-### VS Code (GitHub Copilot)
-
-Add to your `.vscode/mcp.json` or user MCP settings:
-
-```json
-{
-  "servers": {
-    "awesome-agent-toolkits-mcp": {
-      "command": "uvx",
-      "args": ["awesome-agent-toolkits-mcp-server@latest"],
-      "transportType": "stdio"
-    }
-  }
-}
-```
-
-### Claude Desktop
-
-Add to `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "awesome-agent-toolkits-mcp": {
-      "command": "uvx",
-      "args": ["awesome-agent-toolkits-mcp-server@latest"]
-    }
-  }
-}
-```
-
-## Available Tools (Examples)
-
-The server auto-discovers tools from all installed skills. Below are examples from the included devops skills:
-
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `eks_inventory_addons` | Inventory EKS add-ons via AWS API | `cluster`, `region`, `profile` (optional) |
-| `aks_inventory_addons` | Inventory AKS add-ons via Azure API | `cluster`, `resource_group`, `subscription` (optional) |
-| `inventory_helm` | List Helm releases in current context | — |
-| `eks_scan_terraform` | Scan Terraform for EKS resources | `root_dir` |
-| `aks_scan_terraform` | Scan Terraform for AKS resources | `root_dir` |
-| `check_prereqs` | Validate CLI/auth prerequisites | `provider` (aws\|azure), `profile` (optional) |
-
-## Available Resources
-
-| URI | Description |
-|-----|-------------|
-| `skills://eks/compatibility` | EKS add-on compatibility matrix |
-| `skills://aks/compatibility` | AKS add-on compatibility matrix |
-| `skills://eks/report-templates` | EKS HTML report templates |
-| `skills://aks/report-templates` | AKS HTML report templates |
-
-## Adding Tools from New Skills
-
-To expose a new skill's tools via MCP, create a `tools/mcp_tools.json` file in the skill directory:
-
-```json
-{
-  "tools": [
-    {
-      "name": "my_tool_name",
-      "script": "my_script.py",
-      "description": "What this tool does.",
-      "params": [
-        { "name": "param_name", "flag": "--param-name", "required": true, "description": "Param description" }
-      ]
-    }
-  ]
-}
-```
-
-The MCP server auto-discovers these at startup. Tools are namespaced by category: `<category>__<tool_name>` (e.g., `devops__eks_inventory_addons`).
-
-### Adding Resources
-
-Any files in `references/` or `assets/` within a skill directory are automatically exposed as MCP resources with URI pattern:
-```
-skills://<category>/<skill-name>/references/<filename>
-skills://<category>/<skill-name>/assets/<filename>
-```
-
-## Available Prompts
-
-Prompts are auto-discovered from `tools/mcp_prompts.json` in each skill directory, namespaced as `<category>__<prompt_name>`. Example prompts from the devops skills:
-
-| Prompt | Description | Arguments |
-|--------|-------------|-----------|
-| `devops__analyze_drift` | Compare inventory vs Terraform versions | `inventory_json`, `terraform_json` |
-| `devops__changelog_research` | Research changelog between versions | `package`, `from_version`, `to_version` |
-| `devops__upgrade_plan` | Generate upgrade plan from drift analysis | `drift_analysis` |
-
-### Adding Prompts
-
-Create a `tools/mcp_prompts.json` in your skill directory:
-
-```json
-{
-  "prompts": [
-    {
-      "name": "my_prompt",
-      "description": "What this prompt produces.",
-      "params": [
-        { "name": "input_data", "required": true, "description": "Data to analyze" }
-      ],
-      "template": "Analyze the following:\n\n{input_data}\n\nProduce a summary."
-    }
-  ]
-}
-```
+Revision conflicts return `code: "revision_mismatch"` along with the current
+revision so agents can re-read and retry.
