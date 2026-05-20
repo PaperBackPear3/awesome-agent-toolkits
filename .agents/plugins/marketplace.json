@@ -16,6 +16,17 @@
       "category": "DevOps"
     },
     {
+      "name": "harness-addons",
+      "source": {
+        "source": "local",
+        "path": "./plugins/harness-addons"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Productivity"
+    },
+    {
       "name": "plugin-factory",
       "source": {
         "source": "local",

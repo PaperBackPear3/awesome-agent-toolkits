@@ -22,6 +22,21 @@
       ]
     },
     {
+      "name": "harness-addons",
+      "description": "Exposes the agent-toolkit MCP server (notes, todos, timers, and projects) as harness add-ons",
+      "source": "./plugins/harness-addons",
+      "version": "1.0.0",
+      "category": "productivity",
+      "keywords": [
+        "notes",
+        "todos",
+        "timers",
+        "projects",
+        "persistence",
+        "agent-toolkit"
+      ]
+    },
+    {
       "name": "plugin-factory",
       "description": "Meta-plugin for creating new plugins and skills in this repository",
       "source": "./plugins/plugin-factory",

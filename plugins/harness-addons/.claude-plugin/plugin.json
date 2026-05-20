@@ -1,0 +1,10 @@
+{
+  "name": "harness-addons",
+  "version": "1.0.0",
+  "description": "Exposes the agent-toolkit MCP server (notes, todos, timers, and projects) as harness add-ons. Provides persistent markdown notes with full-text search, project-scoped todos, durable timers, and a cross-project registry.",
+  "author": { "name": "Fabio Angeloni" },
+  "homepage": "https://github.com/PaperBackPear3/awesome-agent-toolkits",
+  "repository": "https://github.com/PaperBackPear3/awesome-agent-toolkits",
+  "license": "MIT",
+  "keywords": ["notes", "todos", "timers", "projects", "persistence", "agent-toolkit"]
+}
