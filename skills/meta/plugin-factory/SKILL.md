@@ -1,22 +1,25 @@
 ---
 name: plugin-factory
 description: >
-  Create new plugins and skills for this repository. Scaffolds complete plugin structures
-  (directory layout, .claude-plugin, .codex-plugin, .mcp.json, marketplace registration),
-  writes SKILL.md files with proper frontmatter and phased workflows, generates MCP tool
-  scripts, validates everything, and registers in manifests.
+  Create new plugins, skills, and MCP servers for this repository. Scaffolds complete plugin
+  structures (directory layout, .claude-plugin, .codex-plugin, .mcp.json, marketplace
+  registration), writes SKILL.md files with proper frontmatter and phased workflows,
+  generates MCP tool scripts, writes MCP server code, validates everything, and registers
+  in manifests.
   Use when the user wants to create a new plugin, add a new skill to the repository,
   scaffold a plugin or skill from scratch, generate MCP tool boilerplate, validate an
-  existing skill or plugin structure, or register something in the marketplace.
-  Do NOT use for modifying the MCP server code itself, managing infrastructure, or
-  deploying plugins to external registries.
+  existing skill or plugin structure, register something in the marketplace, add or create
+  an MCP server, configure an MCP server for a plugin, or integrate a new MCP server into
+  the harness.
+  Do NOT use for managing cloud infrastructure, CI/CD pipelines, or deploying plugins to
+  external registries outside this repository.
 version: 1
 requires_tools:
   - meta__scaffold_plugin
   - meta__scaffold_skill
   - meta__validate_plugin
   - meta__validate_skill
-tags: [meta, scaffolding, plugin, skill, creation]
+tags: [meta, scaffolding, plugin, skill, creation, mcp-server]
 ---
 
 # Plugin Factory
@@ -28,11 +31,12 @@ then advance.
 **Hard rules — never violate:**
 
 - Never overwrite existing files without explicit user confirmation.
-- Never bundle an MCP server inside a plugin — tools are declared via `mcp_tools.json`.
 - Always validate before declaring done — run `validate_plugin` and `validate_skill`.
 - Skills must include "Use when..." and "Do NOT use for..." in their description.
 - Tool scripts use stdlib only — no pip dependencies.
 - Use kebab-case for skill names, plugin names, and directory names.
+- When adding an MCP server: declare it in `.mcp.json` under `mcpServers` and guide the
+  user through install/restart steps — never silently mutate a running harness process.
 
 ---
 
@@ -48,12 +52,17 @@ Understand what the user wants to build:
    - What tools/CLIs does it need?
    - What phases will it follow?
 4. **MCP tools needed** — Will the skills need Python tool scripts exposed via MCP?
+5. **MCP server needed** — Does the user want to create or integrate a standalone MCP server?
+   - If yes, go through **Phase 2b** after scaffolding the plugin.
+   - Clarify: new server from scratch, or wrapping an existing CLI/API?
+   - Clarify: transport preference (`stdio` default, `sse`, or `streamable-http`)?
 
 Output a summary table before proceeding:
 
 | Component | Name | Description |
 |-----------|------|-------------|
 | Plugin | `<name>` | ... |
+| MCP Server | `<name>` (if any) | ... |
 | Skill 1 | `<name>` | ... |
 | Skill 2 | `<name>` | ... |
 | Tool 1 | `<category>__<name>` | ... |
@@ -75,6 +84,138 @@ plugins/<plugin-name>/
 ```
 
 Verify the output and show the user what was created.
+
+---
+
+## Phase 2b: Create MCP Server (if requested)
+
+Skip this phase if the user does not need a standalone MCP server.
+
+### 2b-1. Choose server approach
+
+| Approach | Transport | When to use |
+|----------|-----------|-------------|
+| **FastMCP (Python)** | `stdio` | New server from scratch; rich tool/resource/prompt support |
+| **Wrapper script** | `stdio` | Thin shell around an existing CLI or REST API |
+| **Local package** (`uvx`/`npx`) | `stdio` | User has a published package to run locally |
+| **Remote HTTP server** | `sse` / `streamable-http` | Server already deployed at a URL; no local process |
+| **Inline definition** | n/a | Single-file tool with no separate server process needed |
+
+### 2b-2. Write the server code (local only)
+
+Skip this step for remote or inline approaches.
+
+For a **FastMCP** server, create `plugins/<plugin-name>/server/server.py`:
+
+```python
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("<plugin-name>")
+
+@mcp.tool()
+def my_tool(arg: str) -> str:
+    """Tool description shown to the model."""
+    return arg
+
+if __name__ == "__main__":
+    mcp.run()  # defaults to stdio transport
+```
+
+- Keep each tool focused on one action.
+- Use Python type annotations — FastMCP reflects them into the tool schema.
+- Return plain values (str, dict, list); FastMCP serializes them.
+- Add a `requirements.txt` in `server/` listing `mcp` and any other deps.
+
+### 2b-3. Register in `.mcp.json`
+
+Update the plugin's `.mcp.json` to declare the server under `mcpServers`.
+Pick the block that matches the chosen approach:
+
+**Local script (stdio):**
+```json
+{
+  "mcpServers": {
+    "<server-name>": {
+      "command": "python3",
+      "args": ["plugins/<plugin-name>/server/server.py"],
+      "env": {}
+    }
+  }
+}
+```
+
+**Local package via `uvx` or `npx` (stdio):**
+```json
+{
+  "mcpServers": {
+    "<server-name>": {
+      "command": "uvx",
+      "args": ["<package-name>"],
+      "env": { "API_KEY": "${API_KEY}" }
+    }
+  }
+}
+```
+
+**Remote server (SSE or streamable-http):**
+```json
+{
+  "mcpServers": {
+    "<server-name>": {
+      "url": "https://<host>/mcp",
+      "headers": { "Authorization": "Bearer ${API_KEY}" }
+    }
+  }
+}
+```
+No local process is spawned; the harness connects over HTTP. Ask the user for
+the URL and any required auth headers/env vars.
+
+**Inline tool (no separate process):**
+Some harnesses support declaring lightweight tools directly in `.mcp.json`
+without spawning a server. Use this for trivial single-tool cases:
+```json
+{
+  "mcpServers": {
+    "<server-name>": {
+      "command": "python3",
+      "args": ["-c", "import sys,json; print(json.dumps({'result': sys.argv[1]}))"],
+      "env": {}
+    }
+  }
+}
+```
+Keep inline definitions to a single, short expression — anything complex
+belongs in a real script file.
+
+### 2b-4. Guide the user through activation
+
+After writing the files, tell the user exactly what to do based on approach:
+
+**For local scripts/packages:**
+1. Install deps if needed: `pip install -r plugins/<plugin-name>/server/requirements.txt`
+   (or `uv pip install ...` if they use uv)
+2. Restart Claude Code / the harness so it picks up the new `mcpServers` entry.
+3. Verify the server appears: run `/mcp` in Claude Code and confirm the server name is listed.
+
+**For remote servers:**
+1. Confirm the URL is reachable: `curl -I <url>`
+2. Set any required env vars (API keys, tokens) in the shell or `.env`.
+3. Restart Claude Code / the harness.
+4. Verify with `/mcp` — the remote server should appear as connected.
+
+> **Why restart is required**: The harness reads `.mcp.json` at startup. A running instance
+> won't see changes until restarted. Guide the user explicitly — never assume they know.
+
+### 2b-5. Expose server tools in skill declarations
+
+If the plugin's skills will call tools from this MCP server, add them to `requires_mcp`
+in each relevant SKILL.md frontmatter:
+
+```yaml
+requires_mcp:
+  - <server-name>__<tool-name>
+```
 
 ---
 
@@ -139,7 +280,12 @@ Run `meta__validate_plugin` on the plugin directory. It checks:
 - All required files exist (.claude-plugin/plugin.json, .mcp.json, etc.)
 - JSON files are valid
 - Skills symlinks resolve
-- .mcp.json does not bundle a standalone MCP server (must be `{"mcpServers": {}}`)
+- If `.mcp.json` declares `mcpServers`, confirm the referenced command/script exists
+
+If the plugin includes an MCP server (Phase 2b), also verify manually:
+- The server script is executable and runs without import errors:
+  `python3 plugins/<plugin-name>/server/server.py --help` (or equivalent)
+- The `mcpServers` entry in `.mcp.json` uses the correct command and args
 
 Run `meta__validate_skill` on each skill directory. It checks:
 - SKILL.md exists and has valid frontmatter
