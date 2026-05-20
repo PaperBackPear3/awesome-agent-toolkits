@@ -34,20 +34,6 @@
         "skill",
         "creation"
       ]
-    },
-    {
-      "name": "plugin-manager",
-      "description": "Discover, install, and verify skills and plugins from the registry",
-      "source": "./plugins/plugin-manager",
-      "version": "1.0.0",
-      "category": "meta",
-      "keywords": [
-        "meta",
-        "install",
-        "plugin",
-        "skill",
-        "setup"
-      ]
     }
   ]
 }

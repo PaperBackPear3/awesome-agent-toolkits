@@ -92,26 +92,6 @@
         "skill",
         "creation"
       ]
-    },
-    {
-      "name": "plugin-manager",
-      "category": "meta",
-      "version": 1,
-      "path": "meta/plugin-manager",
-      "description": "Discover, install, and verify skills and plugins from the registry. Lists available plugins, installs skills by symlink or copy, and validates installed skill directories.",
-      "requires_tools": [
-        "meta__list_plugins",
-        "meta__install_skill",
-        "meta__verify_install"
-      ],
-      "requires_mcp": [],
-      "tags": [
-        "meta",
-        "install",
-        "plugin",
-        "skill",
-        "setup"
-      ]
     }
   ]
 }

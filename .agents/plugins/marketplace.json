@@ -25,17 +25,6 @@
         "installation": "AVAILABLE"
       },
       "category": "Meta"
-    },
-    {
-      "name": "plugin-manager",
-      "source": {
-        "source": "local",
-        "path": "./plugins/plugin-manager"
-      },
-      "policy": {
-        "installation": "AVAILABLE"
-      },
-      "category": "Meta"
     }
   ]
 }
