@@ -85,7 +85,7 @@ Edit `skills/manifest.json`:
 
 ### Step 5: Done
 
-The MCP server discovers the skill automatically via `list_skills()` / `retrieve_skill()`.
+The skill is ready. Agents discover it via the YAML frontmatter `description` field when the skill is in their skills directory.
 
 ---
 
@@ -171,7 +171,7 @@ Prompts are namespaced as `<category>__my_prompt` and auto-discovered on server 
 
 ### Step 4: Done
 
-Restart the MCP server — your tool appears as `<category>__my_tool`.
+Your tool is declared and will be available when the skill is loaded by an agent that supports MCP tool discovery.
 
 ---
 
@@ -229,14 +229,13 @@ plugins/<plugin-name>/
 **`.mcp.json`**:
 ```json
 {
-  "mcpServers": {
-    "my-server": {
-      "command": "uvx",
-      "args": ["awesome-agent-toolkits-mcp-server@latest", "--skills-dir", "./skills"]
-    }
-  }
+  "mcpServers": {}
 }
 ```
+
+Plugins do not bundle an MCP server. If your skill needs MCP tools, declare them in
+`tools/mcp_tools.json` within the skill. The Agent Toolkit MCP (`agent-toolkit-mcp-server`)
+is a separate installation — see [INSTALL.md](INSTALL.md).
 
 ### Step 3: Symlink skills
 
@@ -315,7 +314,7 @@ The parent skill references these via: *"Delegate to the research agent at `agen
 - [ ] (If prompts) `tools/mcp_prompts.json` created
 - [ ] (If tools) Scripts output JSON, use argparse, stdlib only
 - [ ] (If references) Files in `references/` for deep-dive content
-- [ ] Tested: `uvx awesome-agent-toolkits-mcp-server@latest` starts without errors (or `python3 mcp-server/server.py` from source)
+- [ ] Tested: skill loads correctly when copied to agent's skills directory
 
 ## Checklist: New Plugin
 

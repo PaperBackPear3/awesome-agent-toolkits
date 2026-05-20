@@ -22,7 +22,7 @@ plugins/<plugin-name>/              ← Installable bundles for agent marketplac
   .mcp.json
   skills/                           ← Symlinks to canonical skills
 rules/                              ← Agent behavior rules (per-domain)
-mcp-server/server.py                ← Auto-discovering MCP server (published as `awesome-agent-toolkits-mcp-server` via uvx)
+mcp-server/                         ← Agent Toolkit MCP server (published separately as `agent-toolkit-mcp-server` via uvx)
 skills/manifest.json                ← Machine-readable skill catalog
 docs/                               ← Framework documentation
 ```
@@ -41,7 +41,6 @@ docs/                               ← Framework documentation
 
 1. Write a Python script in `skills/<category>/<skill>/tools/` — prints JSON to stdout, uses argparse, stdlib only
 2. Add entry to that skill's `tools/mcp_tools.json`
-3. MCP server auto-discovers on restart
 
 ### Adding a new plugin
 
@@ -65,5 +64,5 @@ docs/                               ← Framework documentation
 - Don't add `requirements.txt` or external Python dependencies to tool scripts
 - Don't put orchestration logic in MCP tools (keep them stateless)
 - Don't create skills without registering in `manifest.json`
-- Don't hardcode tool registrations in `server.py` — use `mcp_tools.json`
+- Don't hardcode tool registrations — use `mcp_tools.json`
 - Don't mix domains in one skill — create separate skills per concern

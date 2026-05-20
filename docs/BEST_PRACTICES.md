@@ -520,8 +520,8 @@ AWS's Agent Toolkit for AWS establishes the gold-standard pattern for packaging 
 
 ### Key Principles
 
-1. **Skills are discoverable at runtime** — via `list_skills` and `retrieve_skill` MCP tools. Agents don't need local installation to find and use skills.
-2. **Plugins bundle everything** — a plugin = MCP server config + skills + metadata. One install gives the agent everything it needs.
+1. **Skills are discoverable at install time** — agents load skills from their skills directory via YAML frontmatter. The Agent Toolkit MCP is installed separately.
+2. **Plugins bundle skills** — a plugin = skills + metadata. One install gives the agent the skills it needs. The Agent Toolkit MCP is a separate, optional installation.
 3. **Rules files set guardrails** — project-level markdown that tells agents _how_ to work (e.g., "use MCP first", "never apply without confirmation").
 4. **Marketplace manifests enable distribution** — `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json` make skills installable via `/plugin install`.
 5. **Skills are the unit of knowledge** — `SKILL.md` with YAML frontmatter (`name`, `description`, `version`) is the universal format.
@@ -534,24 +534,26 @@ AWS's Agent Toolkit for AWS establishes the gold-standard pattern for packaging 
 plugins/<name>/                     # Installable bundles
   .claude-plugin/plugin.json        #   Claude Code metadata
   .codex-plugin/plugin.json         #   Codex metadata (includes skills/mcpServers pointers)
-  .mcp.json                         #   MCP server config
+  .mcp.json                         #   MCP server config (empty {} — no bundled MCP)
   skills/                           #   Bundled skills (symlinks or copies)
 skills/<category>/<skill>/          # Canonical skill content
   SKILL.md                          #   Entry point (YAML frontmatter + instructions)
   references/                       #   Deep-dive reference materials
   tools/                            #   Helper scripts
 rules/                              # Agent behavior rules
-mcp-server/                         # MCP server exposing tools + skill discovery
+mcp-server/                         # Agent Toolkit MCP (separate package: agent-toolkit-mcp-server)
 ```
+
+> **Note:** the Agent Toolkit MCP (`mcp-server/`) is a separate, independently versioned
+> package. It is not bundled with plugins. Users who want notes, todos, timers, and
+> cross-project registry must install it independently — see [INSTALL.md](INSTALL.md).
 
 ### Skill Discovery Flow
 
 ```
 Agent receives user request
-  → Agent calls list_skills() via MCP
-  → Finds matching skill by description
-  → Agent calls retrieve_skill(name) via MCP
-  → Receives full SKILL.md content
+  → Finds matching skill in its skills directory by description (SKILL.md frontmatter)
+  → Loads the full SKILL.md content
   → Follows the skill's phased instructions
   → Calls MCP tools (inventory, scan, etc.) as directed by skill
 ```

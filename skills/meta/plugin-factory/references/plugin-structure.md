@@ -93,20 +93,18 @@ Example:
 
 ## `.mcp.json`
 
-All plugins use the same MCP server entry under the key `"awesome-agent-toolkits-mcp"`:
+Plugins do not bundle an MCP server. This file must always be present but declares no servers:
 
 ```json
 {
-  "mcpServers": {
-    "awesome-agent-toolkits-mcp": {
-      "command": "uvx",
-      "args": ["awesome-agent-toolkits-mcp-server@latest"]
-    }
-  }
+  "mcpServers": {}
 }
 ```
 
-**Important:** Claude Code deduplicates MCP servers by endpoint. If a user installs multiple plugins that all declare the same `awesome-agent-toolkits-mcp` server, only one instance is started. This is by design — all skills share a single MCP server process that auto-discovers them.
+If your skill uses MCP tools, declare them in the skill's `tools/mcp_tools.json`. The
+**Agent Toolkit MCP** (`agent-toolkit-mcp-server`) — which provides notes, todos, timers,
+and project registry — is a separate package installed independently by the user. Do not
+reference it here.
 
 ---
 

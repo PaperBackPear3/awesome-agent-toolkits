@@ -2,126 +2,36 @@
 
 ## Prerequisites
 
-- **Python 3.10+** (for MCP server)
 - **An AI coding agent** — Claude Code, Codex, Cursor, Kiro, or any MCP-compatible agent
 - **Cloud CLIs** (only for skills that need them): `aws`, `az`, `kubectl`, `helm`, `terraform`
 
 ---
 
-## Option 1: Plugin Install (Recommended)
+## Part 1: Installing Skills
 
-One command gives your agent skills + MCP server — no manual config needed.
+Skills are instruction packages for your agent. Install them via plugin or manually.
 
-### Claude Code
+### Option A: Plugin Install (Recommended)
+
+One command gives your agent the bundled skills with no manual config.
+
+**Claude Code**
 
 ```bash
 /plugin marketplace add PaperBackPear3/awesome-agent-toolkits
 /plugin install devops-core@awesome-agent-toolkits
 ```
 
-### Codex
+**Codex**
 
 ```bash
 codex plugin marketplace add PaperBackPear3/awesome-agent-toolkits
 # Then run /plugins in Codex to install devops-core
 ```
 
-### Kiro
+### Option B: Manual Skill Copy
 
-Add to `.kiro/settings/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "awesome-agent-toolkits-mcp": {
-      "command": "uvx",
-      "args": ["awesome-agent-toolkits-mcp-server@latest"]
-    }
-  }
-}
-```
-
-Then copy skills:
-```bash
-cp -r skills/<category>/* ~/.kiro/skills/
-```
-
----
-
-## Option 2: MCP Server via uvx
-
-Run the MCP server for tool access + runtime skill discovery. No clone needed — `uvx` runs it directly from PyPI.
-
-### Configure your agent
-
-Add to your agent's MCP config:
-
-**VS Code (GitHub Copilot)** — `.vscode/mcp.json`:
-```json
-{
-  "servers": {
-    "awesome-agent-toolkits-mcp": {
-      "command": "uvx",
-      "args": ["awesome-agent-toolkits-mcp-server@latest"]
-    }
-  }
-}
-```
-
-**Claude Code** — `~/.claude/settings.json` or project `.mcp.json`:
-```json
-{
-  "mcpServers": {
-    "awesome-agent-toolkits-mcp": {
-      "command": "uvx",
-      "args": ["awesome-agent-toolkits-mcp-server@latest"]
-    }
-  }
-}
-```
-
-**Claude Desktop** — `claude_desktop_config.json`:
-```json
-{
-  "mcpServers": {
-    "awesome-agent-toolkits-mcp": {
-      "command": "uvx",
-      "args": ["awesome-agent-toolkits-mcp-server@latest"]
-    }
-  }
-}
-```
-
-Point at a custom skills directory with `--skills-dir`:
-```json
-{
-  "args": ["awesome-agent-toolkits-mcp-server@latest", "--skills-dir", "/path/to/skills"]
-}
-```
-
-### Verify
-
-Ask your agent: *"List available skills"* — it should call `list_skills()` and show your installed skills.
-
----
-
-## Option 2b: MCP Server via Docker (Local Development)
-
-For local development, run the MCP server in Docker:
-
-```bash
-git clone https://github.com/PaperBackPear3/awesome-agent-toolkits.git ~/skills
-cd ~/skills
-docker compose up mcp-server
-```
-
-This builds the server and mounts `./skills` as a read-only volume. Skills changes are reflected immediately on restart.
-
----
-
-## Option 3: Manual Skill Copy
-
-Copy individual skills into your agent's skill directory. No MCP server needed, but no runtime discovery.
+Copy individual skills into your agent's skill directory.
 
 ```bash
 git clone https://github.com/PaperBackPear3/awesome-agent-toolkits.git ~/skills
@@ -141,9 +51,7 @@ mkdir -p ~/.claude/skills
 cp -r ~/skills/skills/devops/aws-eks-updater ~/.claude/skills/
 ```
 
----
-
-## Option 4: Symlinks (for development)
+### Option C: Symlinks (for development)
 
 If you want to edit skills and have changes reflected immediately:
 
@@ -155,21 +63,78 @@ ln -s ~/skills/skills/devops/azure-aks-updater ~/.claude/skills/azure-aks-update
 
 ---
 
-## Verifying Installation
+## Part 2: Installing the Agent Toolkit MCP (Optional, Separate)
 
-After any method, test by asking your agent:
+The **Agent Toolkit MCP** is a separate package (`agent-toolkit-mcp-server`) that adds
+capabilities not built into agents — persistent notes, todos, timers, and a cross-project
+registry. It is independent of this skills repository and must be installed on its own.
 
-- *"List available skills"* → (MCP) should call `list_skills()` and show installed skills
-- *"Help me with [task matching a skill description]"* → should trigger the relevant skill
-- *"What skills do you have?"* → should enumerate available skills
+See the [mcp-server README](../mcp-server/README.md) for the full tool index.
+
+### Configure your agent
+
+Add to your agent's MCP config (`~/.claude/settings.json`, project `.mcp.json`, etc.):
+
+**Claude Code**
+
+```json
+{
+  "mcpServers": {
+    "agent-toolkit": {
+      "command": "uvx",
+      "args": ["agent-toolkit-mcp-server@latest"]
+    }
+  }
+}
+```
+
+**VS Code (GitHub Copilot)** — `.vscode/mcp.json`
+
+```json
+{
+  "servers": {
+    "agent-toolkit": {
+      "command": "uvx",
+      "args": ["agent-toolkit-mcp-server@latest"]
+    }
+  }
+}
+```
+
+**Claude Desktop** — `claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "agent-toolkit": {
+      "command": "uvx",
+      "args": ["agent-toolkit-mcp-server@latest"]
+    }
+  }
+}
+```
+
+### Data location
+
+All state is stored under `~/.agent-toolkit/` by default. Override with the
+`AGENT_TOOLKIT_HOME` environment variable.
+
+---
+
+## Verifying Skills Installation
+
+After installing skills, test by asking your agent:
+
+- *"Help me update my EKS cluster"* → should trigger `aws-eks-updater`
+- *"Update my AKS cluster"* → should trigger `azure-aks-updater`
 
 ---
 
 ## Uninstalling
 
-| Method | Uninstall |
-|--------|-----------|
+| What | How |
+|------|-----|
 | Plugin | `/plugin uninstall devops-core@awesome-agent-toolkits` |
-| MCP | Remove the server entry from your MCP config |
-| Manual copy | Delete the skill directory |
+| Manual skill copy | Delete the skill directory |
 | Symlink | Remove the symlink |
+| Agent Toolkit MCP | Remove the server entry from your MCP config |

@@ -28,7 +28,7 @@ then advance.
 **Hard rules — never violate:**
 
 - Never overwrite existing files without explicit user confirmation.
-- Never modify `mcp-server/server.py` — tools are declared via `mcp_tools.json`.
+- Never bundle an MCP server inside a plugin — tools are declared via `mcp_tools.json`.
 - Always validate before declaring done — run `validate_plugin` and `validate_skill`.
 - Skills must include "Use when..." and "Do NOT use for..." in their description.
 - Tool scripts use stdlib only — no pip dependencies.
@@ -139,7 +139,7 @@ Run `meta__validate_plugin` on the plugin directory. It checks:
 - All required files exist (.claude-plugin/plugin.json, .mcp.json, etc.)
 - JSON files are valid
 - Skills symlinks resolve
-- .mcp.json uses the `"awesome-agent-toolkits-mcp"` server key
+- .mcp.json does not bundle a standalone MCP server (must be `{"mcpServers": {}}`)
 
 Run `meta__validate_skill` on each skill directory. It checks:
 - SKILL.md exists and has valid frontmatter
@@ -177,8 +177,7 @@ Add the plugin to both marketplace files:
 python3 -c "import json; json.load(open('skills/manifest.json'))"
 ```
 
-Confirm the MCP server discovers the new skill by checking that `list_skills()`
-would find the SKILL.md.
+Confirm the skill loads correctly when placed in the agent's skills directory.
 
 ---
 

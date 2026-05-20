@@ -1,8 +1,3 @@
 {
-  "mcpServers": {
-    "awesome-agent-toolkits-mcp": {
-      "command": "uvx",
-      "args": ["awesome-agent-toolkits-mcp-server@latest"]
-    }
-  }
+  "mcpServers": {}
 }
