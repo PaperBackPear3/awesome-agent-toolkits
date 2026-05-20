@@ -26,10 +26,6 @@ Copy a skill directory into your agent's skill folder:
 | GitHub Copilot | `~/.agents/skills/<skill-name>/` |
 | Claude Code | `~/.claude/skills/<skill-name>/` |
 
-### Method 3: MCP Discovery
-
-Run the MCP server via `uvx awesome-agent-toolkits-mcp-server@latest` and use the `list_skills` / `retrieve_skill` tools to dynamically load skills.
-
 ## Skill Structure
 
 Each skill follows this layout:

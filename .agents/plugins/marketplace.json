@@ -16,21 +16,21 @@
       "category": "DevOps"
     },
     {
-      "name": "plugin-factory",
+      "name": "harness-addons",
       "source": {
         "source": "local",
-        "path": "./plugins/plugin-factory"
+        "path": "./plugins/harness-addons"
       },
       "policy": {
         "installation": "AVAILABLE"
       },
-      "category": "Meta"
+      "category": "Productivity"
     },
     {
-      "name": "plugin-manager",
+      "name": "plugin-factory",
       "source": {
         "source": "local",
-        "path": "./plugins/plugin-manager"
+        "path": "./plugins/plugin-factory"
       },
       "policy": {
         "installation": "AVAILABLE"

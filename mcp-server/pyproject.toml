@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "awesome-agent-toolkits-mcp-server"
-version = "0.1.3"
-description = "Auto-discovering MCP server for agent skills"
+name = "agent-toolkit-mcp-server"
+version = "0.3.0"
+description = "MCP server providing persistent notes, todos, timers, and a cross-project registry — capabilities that augment Claude Code's built-in harness."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -20,11 +20,15 @@ dependencies = [
 Repository = "https://github.com/PaperBackPear3/awesome-agent-toolkits"
 
 [project.scripts]
-awesome-agent-toolkits-mcp-server = "server:main"
+agent-toolkit-mcp-server = "server:main"
 
 [tool.hatch.build.targets.wheel]
 
 [tool.hatch.build.targets.wheel.force-include]
 "server.py" = "server.py"
-"_discovery.py" = "_discovery.py"
-"_registration.py" = "_registration.py"
+"storage.py" = "storage.py"
+"db.py" = "db.py"
+"notes.py" = "notes.py"
+"todos.py" = "todos.py"
+"timers.py" = "timers.py"
+"projects.py" = "projects.py"

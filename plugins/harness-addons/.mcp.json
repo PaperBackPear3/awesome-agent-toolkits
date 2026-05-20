@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "agent-toolkit": {
+      "command": "uvx",
+      "args": [
+        "agent-toolkit-mcp-server"
+      ]
+    }
+  }
+}
