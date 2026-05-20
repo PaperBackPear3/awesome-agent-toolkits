@@ -1,25 +1,13 @@
-"""Timers tools — durable scheduled wake-ups with a background watcher thread."""
+"""Timers tools — durable scheduled wake-ups with a background watcher thread (SQLite-backed)."""
 from __future__ import annotations
 
-import json
 import threading
-import time
 import uuid
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any
 
-from storage import (
-    err,
-    ensure_dirs,
-    file_lock,
-    load_json,
-    now_iso,
-    ok,
-    save_json,
-    timers_fired_dir,
-    timers_pending_path,
-)
+import db
+from storage import err, now_iso, ok
 
 
 def _parse_iso(s: str) -> datetime | None:
@@ -34,51 +22,47 @@ def _parse_iso(s: str) -> datetime | None:
         return None
 
 
-def _load_pending() -> list[dict[str, Any]]:
-    return load_json(timers_pending_path(), []) or []
-
-
-def _save_pending(pending: list[dict[str, Any]]) -> None:
-    save_json(timers_pending_path(), pending)
+def _row_to_dict(row) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "fire_at": row["fire_at"],
+        "recurring_seconds": row["recurring_seconds"],
+        "message": row["message"],
+        "paused": bool(row["paused"]),
+        "created": row["created"],
+    }
 
 
 def _check_once() -> None:
-    """Inspect pending; move fired ones into fired/, reschedule recurring."""
-    pending_path = timers_pending_path()
-    with file_lock(pending_path):
-        pending = _load_pending()
-        now = datetime.now(timezone.utc)
-        changed = False
-        new_pending: list[dict[str, Any]] = []
-        for t in pending:
-            if t.get("paused"):
-                new_pending.append(t)
-                continue
-            fire_at = _parse_iso(t.get("fire_at", ""))
+    """Move due timers from `timers` to `fired_timers`; re-arm recurring ones."""
+    conn = db.get_conn()
+    now = datetime.now(timezone.utc)
+    with db.write_lock():
+        rows = conn.execute("SELECT * FROM timers WHERE paused = 0").fetchall()
+        for r in rows:
+            fire_at = _parse_iso(r["fire_at"])
             if fire_at is None:
-                # malformed — drop
-                changed = True
+                conn.execute("DELETE FROM timers WHERE id = ?", (r["id"],))
                 continue
-            if fire_at <= now:
-                # fire
-                fired = dict(t)
-                fired["fired_at"] = now_iso()
-                fired_file = timers_fired_dir() / f"{t['id']}-{int(now.timestamp() * 1000)}.json"
-                save_json(fired_file, fired)
-                changed = True
-                rec = t.get("recurring_seconds") or 0
-                if rec and rec > 0:
-                    # re-arm
-                    next_fire = fire_at
-                    while next_fire <= now:
-                        next_fire = next_fire + timedelta(seconds=rec)
-                    t["fire_at"] = next_fire.isoformat()
-                    new_pending.append(t)
-                # else: drop (one-shot)
+            if fire_at > now:
+                continue
+            fired_key = f"{r['id']}-{int(now.timestamp() * 1000)}"
+            conn.execute(
+                "INSERT OR IGNORE INTO fired_timers(id, name, fired_at, fire_at, message) VALUES (?,?,?,?,?)",
+                (fired_key, r["name"], now_iso(), r["fire_at"], r["message"]),
+            )
+            rec = r["recurring_seconds"] or 0
+            if rec and rec > 0:
+                next_fire = fire_at
+                while next_fire <= now:
+                    next_fire = next_fire + timedelta(seconds=rec)
+                conn.execute(
+                    "UPDATE timers SET fire_at = ? WHERE id = ?",
+                    (next_fire.isoformat(), r["id"]),
+                )
             else:
-                new_pending.append(t)
-        if changed:
-            _save_pending(new_pending)
+                conn.execute("DELETE FROM timers WHERE id = ?", (r["id"],))
 
 
 def _watcher_loop(stop_event: threading.Event) -> None:
@@ -98,14 +82,12 @@ def start_watcher() -> None:
     global _watcher_stop, _watcher_thread
     if _watcher_thread and _watcher_thread.is_alive():
         return
-    ensure_dirs()
     _watcher_stop = threading.Event()
     _watcher_thread = threading.Thread(target=_watcher_loop, args=(_watcher_stop,), daemon=True, name="timer-watcher")
     _watcher_thread.start()
 
 
 def register(server) -> int:
-    ensure_dirs()
 
     @server.tool()
     def timer_set(name: str, fire_in_seconds: int = 0, fire_at: str = "", recurring_seconds: int = 0, message: str = "") -> str:
@@ -120,38 +102,32 @@ def register(server) -> int:
                 return err("invalid_arg", f"could not parse fire_at: {fire_at}")
             dt = parsed
         tid = uuid.uuid4().hex
-        timer = {
-            "id": tid,
-            "name": name,
-            "fire_at": dt.isoformat(),
-            "recurring_seconds": recurring_seconds if recurring_seconds > 0 else None,
-            "message": message,
-            "paused": False,
-            "created": now_iso(),
-        }
-        with file_lock(timers_pending_path()):
-            pending = _load_pending()
-            pending.append(timer)
-            _save_pending(pending)
-        return ok(timer)
+        rec = recurring_seconds if recurring_seconds > 0 else None
+        with db.write_lock():
+            db.get_conn().execute(
+                "INSERT INTO timers(id, name, fire_at, recurring_seconds, message, paused, created) VALUES (?,?,?,?,?,?,?)",
+                (tid, name, dt.isoformat(), rec, message, 0, now_iso()),
+            )
+        row = db.get_conn().execute("SELECT * FROM timers WHERE id = ?", (tid,)).fetchone()
+        return ok(_row_to_dict(row))
 
     @server.tool()
     def timer_list(include_paused: bool = True) -> str:
         """List pending timers."""
-        pending = _load_pending()
-        if not include_paused:
-            pending = [t for t in pending if not t.get("paused")]
-        return ok({"count": len(pending), "items": pending})
+        if include_paused:
+            rows = db.get_conn().execute("SELECT * FROM timers ORDER BY fire_at").fetchall()
+        else:
+            rows = db.get_conn().execute("SELECT * FROM timers WHERE paused = 0 ORDER BY fire_at").fetchall()
+        items = [_row_to_dict(r) for r in rows]
+        return ok({"count": len(items), "items": items})
 
     @server.tool()
     def timer_cancel(id: str) -> str:
         """Cancel a pending timer."""
-        with file_lock(timers_pending_path()):
-            pending = _load_pending()
-            new = [t for t in pending if t.get("id") != id]
-            if len(new) == len(pending):
+        with db.write_lock():
+            cur = db.get_conn().execute("DELETE FROM timers WHERE id = ?", (id,))
+            if cur.rowcount == 0:
                 return err("not_found", f"Timer '{id}' not found.")
-            _save_pending(new)
         return ok({"cancelled": id})
 
     @server.tool()
@@ -167,40 +143,23 @@ def register(server) -> int:
     @server.tool()
     def timer_fired(ack: bool = False) -> str:
         """List timers that have fired. If ack=true, also clear them."""
-        d = timers_fired_dir()
-        d.mkdir(parents=True, exist_ok=True)
-        items = []
-        for p in sorted(d.glob("*.json")):
-            data = load_json(p, None)
-            if data:
-                items.append(data)
-            if ack:
-                try:
-                    p.unlink()
-                except OSError:
-                    pass
+        rows = db.get_conn().execute("SELECT * FROM fired_timers ORDER BY fired_at").fetchall()
+        items = [dict(r) for r in rows]
+        if ack:
+            with db.write_lock():
+                db.get_conn().execute("DELETE FROM fired_timers")
         return ok({"count": len(items), "items": items})
 
     @server.tool()
     def timer_ack(id: str) -> str:
         """Clear all fired events for a specific timer id."""
-        d = timers_fired_dir()
-        d.mkdir(parents=True, exist_ok=True)
-        removed = 0
-        for p in d.glob(f"{id}-*.json"):
-            try:
-                p.unlink()
-                removed += 1
-            except OSError:
-                pass
-        # also try unprefixed match
-        legacy = d / f"{id}.json"
-        if legacy.exists():
-            try:
-                legacy.unlink()
-                removed += 1
-            except OSError:
-                pass
+        with db.write_lock():
+            # fired keys are stored as `<id>-<ms>` or legacy bare id
+            cur = db.get_conn().execute(
+                "DELETE FROM fired_timers WHERE id = ? OR id LIKE ?",
+                (id, f"{id}-%"),
+            )
+            removed = cur.rowcount or 0
         if removed == 0:
             return err("not_found", f"No fired events for timer '{id}'.")
         return ok({"acked": id, "removed": removed})
@@ -209,15 +168,11 @@ def register(server) -> int:
 
 
 def _set_paused(tid: str, paused: bool) -> str:
-    with file_lock(timers_pending_path()):
-        pending = _load_pending()
-        found = False
-        for t in pending:
-            if t.get("id") == tid:
-                t["paused"] = paused
-                found = True
-                break
-        if not found:
+    with db.write_lock():
+        cur = db.get_conn().execute(
+            "UPDATE timers SET paused = ? WHERE id = ?",
+            (1 if paused else 0, tid),
+        )
+        if cur.rowcount == 0:
             return err("not_found", f"Timer '{tid}' not found.")
-        _save_pending(pending)
     return ok({"id": tid, "paused": paused})

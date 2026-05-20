@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-toolkit-mcp-server"
-version = "0.2.0"
+version = "0.3.0"
 description = "MCP server providing persistent notes, todos, timers, and a cross-project registry — capabilities that augment Claude Code's built-in harness."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -27,6 +27,7 @@ agent-toolkit-mcp-server = "server:main"
 [tool.hatch.build.targets.wheel.force-include]
 "server.py" = "server.py"
 "storage.py" = "storage.py"
+"db.py" = "db.py"
 "notes.py" = "notes.py"
 "todos.py" = "todos.py"
 "timers.py" = "timers.py"

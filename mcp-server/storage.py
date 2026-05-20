@@ -1,4 +1,8 @@
-"""Filesystem layout, atomic IO, YAML frontmatter, and shared helpers."""
+"""Filesystem layout, atomic IO, YAML frontmatter, and shared helpers.
+
+Notes and project docs are canonical on disk (markdown + YAML frontmatter).
+Todos, timers, and the project registry live in SQLite (see db.py).
+"""
 from __future__ import annotations
 
 import fcntl
@@ -25,34 +29,19 @@ def home() -> Path:
 def ensure_dirs() -> None:
     h = home()
     (h / "notes" / "_global").mkdir(parents=True, exist_ok=True)
-    (h / "todos" / "_global").mkdir(parents=True, exist_ok=True)
-    (h / "timers" / "fired").mkdir(parents=True, exist_ok=True)
-    pj = h / "projects.json"
-    if not pj.exists():
-        atomic_write_text(pj, "{}\n")
-    pending = h / "timers" / "pending.json"
-    if not pending.exists():
-        atomic_write_text(pending, "[]\n")
+    (h / "projects").mkdir(parents=True, exist_ok=True)
 
 
 def notes_dir(project: str) -> Path:
     return home() / "notes" / (project or "_global")
 
 
-def todos_dir(project: str) -> Path:
-    return home() / "todos" / (project or "_global")
+def project_docs_dir(project: str) -> Path:
+    return home() / "projects" / project / "docs"
 
 
-def timers_pending_path() -> Path:
-    return home() / "timers" / "pending.json"
-
-
-def timers_fired_dir() -> Path:
-    return home() / "timers" / "fired"
-
-
-def projects_path() -> Path:
-    return home() / "projects.json"
+def project_doc_path(project: str, name: str) -> Path:
+    return project_docs_dir(project) / (slug(name) + ".md")
 
 
 # ---------- time ----------
@@ -93,21 +82,6 @@ def file_lock(path: Path) -> Iterator[None]:
             yield
         finally:
             fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-
-
-# ---------- json helpers ----------
-
-def load_json(path: Path, default: Any) -> Any:
-    if not path.exists():
-        return default
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return default
-
-
-def save_json(path: Path, data: Any) -> None:
-    atomic_write_text(path, json.dumps(data, indent=2, sort_keys=False) + "\n")
 
 
 # ---------- slug ----------
@@ -191,7 +165,6 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
         key = key.strip()
         val = val.strip()
         if val == "":
-            # could be block list with following "- " items
             items: list[str] = []
             j = i + 1
             while j < len(lines) and lines[j].lstrip().startswith("- "):
@@ -253,19 +226,18 @@ def ok(data: Any) -> str:
     return json.dumps(data, indent=2, sort_keys=False, default=str)
 
 
-# ---------- project validation ----------
-
-def projects_registry() -> dict[str, Any]:
-    return load_json(projects_path(), {}) or {}
-
+# ---------- project validation (DB-backed) ----------
 
 def validate_project(project: str) -> tuple[bool, str | None]:
     """Return (ok, error_json). Empty string project means _global."""
     if not project:
         return True, None
-    reg = projects_registry()
-    if project not in reg:
-        return False, err("unknown_project", f"Project '{project}' is not registered.")
     if project == "_global":
         return False, err("reserved_name", "'_global' is reserved.")
+    # Lazy import: db imports storage for paths.
+    import db
+    conn = db.get_conn()
+    row = conn.execute("SELECT 1 FROM projects WHERE name = ?", (project,)).fetchone()
+    if row is None:
+        return False, err("unknown_project", f"Project '{project}' is not registered.")
     return True, None

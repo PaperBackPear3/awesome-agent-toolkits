@@ -1,53 +1,37 @@
-"""Todos tools — persistent todo items, optionally project-scoped."""
+"""Todos tools — persistent todo items, optionally project-scoped (SQLite-backed)."""
 from __future__ import annotations
 
-import json
 import uuid
-from pathlib import Path
 from typing import Any
 
-from storage import (
-    err,
-    ensure_dirs,
-    file_lock,
-    load_json,
-    now_iso,
-    ok,
-    parse_tag_list,
-    save_json,
-    todos_dir,
-    validate_project,
-)
+import db
+from storage import err, now_iso, ok, parse_tag_list, validate_project
 
 
 _VALID_STATUS = {"open", "in_progress", "done", "cancelled"}
 
 
-def _path(tid: str, project: str) -> Path:
-    return todos_dir(project) / f"{tid}.json"
+def _row_to_dict(row) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "text": row["text"],
+        "status": row["status"],
+        "project": row["project"],
+        "tags": db.unpack_list(row["tags"]),
+        "blockers": db.unpack_list(row["blockers"]),
+        "notes": row["notes"],
+        "created": row["created"],
+        "updated": row["updated"],
+        "completed": row["completed"],
+    }
 
 
-def _load(tid: str, project: str) -> dict[str, Any] | None:
-    p = _path(tid, project)
-    if not p.exists():
-        return None
-    return load_json(p, None)
-
-
-def _find_anywhere(tid: str) -> tuple[dict[str, Any] | None, Path | None]:
-    """Find a todo across all project scopes."""
-    base = todos_dir("").parent
-    for sub in base.iterdir() if base.exists() else []:
-        if not sub.is_dir():
-            continue
-        p = sub / f"{tid}.json"
-        if p.exists():
-            return load_json(p, None), p
-    return None, None
+def _get(tid: str) -> dict[str, Any] | None:
+    row = db.get_conn().execute("SELECT * FROM todos WHERE id = ?", (tid,)).fetchone()
+    return _row_to_dict(row) if row else None
 
 
 def register(server) -> int:
-    ensure_dirs()
 
     @server.tool()
     def todo_create(text: str, project: str = "", tags: str = "", blockers: str = "") -> str:
@@ -59,52 +43,52 @@ def register(server) -> int:
             return err("missing_arg", "text required")
         tid = uuid.uuid4().hex
         now = now_iso()
-        todo = {
-            "id": tid,
-            "text": text,
-            "status": "open",
-            "tags": parse_tag_list(tags),
-            "project": project or "_global",
-            "created": now,
-            "updated": now,
-            "completed": None,
-            "blockers": parse_tag_list(blockers),
-            "notes": "",
-        }
-        p = _path(tid, project)
-        with file_lock(p):
-            save_json(p, todo)
+        proj = project or "_global"
+        with db.write_lock():
+            db.get_conn().execute(
+                "INSERT INTO todos(id, text, status, project, tags, blockers, notes, created, updated, completed) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (
+                    tid, text, "open", proj,
+                    db.pack_list(parse_tag_list(tags)),
+                    db.pack_list(parse_tag_list(blockers)),
+                    "", now, now, None,
+                ),
+            )
         return ok({"id": tid})
 
     @server.tool()
     def todo_list(project: str = "", status: str = "open", tags: str = "") -> str:
-        """List todos; status: open|in_progress|done|cancelled|active|all. 'active' = open + in_progress."""
+        """List todos. project='' means _global scope (use project_register name otherwise).
+        status: open|in_progress|done|cancelled|active|all. 'active' = open + in_progress.
+        tags: comma-separated; a todo must have ALL listed tags to match.
+        """
         okp, e = validate_project(project)
         if not okp:
             return e
-        d = todos_dir(project)
-        d.mkdir(parents=True, exist_ok=True)
-        wanted_tags = set(parse_tag_list(tags))
+        proj = project or "_global"
+        clauses = ["project = ?"]
+        params: list[Any] = [proj]
+        if status == "active":
+            clauses.append("status IN ('open','in_progress')")
+        elif status != "all":
+            clauses.append("status = ?")
+            params.append(status)
+        sql = "SELECT * FROM todos WHERE " + " AND ".join(clauses) + " ORDER BY created"
+        rows = db.get_conn().execute(sql, params).fetchall()
+        wanted = set(parse_tag_list(tags))
         out = []
-        for p in sorted(d.glob("*.json")):
-            t = load_json(p, None)
-            if not t:
+        for r in rows:
+            d = _row_to_dict(r)
+            if wanted and not wanted.issubset(set(d["tags"])):
                 continue
-            t_status = t.get("status")
-            if status == "active":
-                if t_status not in ("open", "in_progress"):
-                    continue
-            elif status != "all" and t_status != status:
-                continue
-            if wanted_tags and not wanted_tags.issubset(set(t.get("tags") or [])):
-                continue
-            out.append(t)
+            out.append(d)
         return ok({"count": len(out), "items": out})
 
     @server.tool()
     def todo_get(id: str) -> str:
         """Get a todo's full details."""
-        t, _ = _find_anywhere(id)
+        t = _get(id)
         if not t:
             return err("not_found", f"Todo '{id}' not found.")
         return ok(t)
@@ -112,8 +96,8 @@ def register(server) -> int:
     @server.tool()
     def todo_update(id: str, text: str = "", status: str = "", project: str = "") -> str:
         """Partial update — change text, status, and/or move to a different project."""
-        t, p = _find_anywhere(id)
-        if not t or not p:
+        t = _get(id)
+        if not t:
             return err("not_found", f"Todo '{id}' not found.")
         if status and status not in _VALID_STATUS:
             return err("invalid_status", f"status must be one of {sorted(_VALID_STATUS)}")
@@ -121,22 +105,25 @@ def register(server) -> int:
             okp, e = validate_project(project)
             if not okp:
                 return e
-        with file_lock(p):
-            if text:
-                t["text"] = text
-            if status:
-                t["status"] = status
-                t["completed"] = now_iso() if status == "done" else None
-            t["updated"] = now_iso()
-            if project and project != t.get("project"):
-                # move file
-                t["project"] = project
-                new_p = _path(id, project)
-                save_json(new_p, t)
-                p.unlink()
-                return ok(t)
-            save_json(p, t)
-        return ok(t)
+        sets = []
+        params: list[Any] = []
+        if text:
+            sets.append("text = ?")
+            params.append(text)
+        if status:
+            sets.append("status = ?")
+            params.append(status)
+            sets.append("completed = ?")
+            params.append(now_iso() if status == "done" else None)
+        if project and project != t["project"]:
+            sets.append("project = ?")
+            params.append(project)
+        sets.append("updated = ?")
+        params.append(now_iso())
+        params.append(id)
+        with db.write_lock():
+            db.get_conn().execute(f"UPDATE todos SET {', '.join(sets)} WHERE id = ?", params)
+        return ok(_get(id))
 
     @server.tool()
     def todo_complete(id: str) -> str:
@@ -146,11 +133,10 @@ def register(server) -> int:
     @server.tool()
     def todo_delete(id: str) -> str:
         """Delete a todo."""
-        t, p = _find_anywhere(id)
-        if not t or not p:
+        if _get(id) is None:
             return err("not_found", f"Todo '{id}' not found.")
-        with file_lock(p):
-            p.unlink()
+        with db.write_lock():
+            db.get_conn().execute("DELETE FROM todos WHERE id = ?", (id,))
         return ok({"deleted": id})
 
     @server.tool()
@@ -169,14 +155,11 @@ def register(server) -> int:
         okp, e = validate_project(project)
         if not okp:
             return e
-        d = todos_dir(project)
-        d.mkdir(parents=True, exist_ok=True)
+        proj = project or "_global"
+        rows = db.get_conn().execute("SELECT tags FROM todos WHERE project = ?", (proj,)).fetchall()
         tags: set[str] = set()
-        for p in d.glob("*.json"):
-            t = load_json(p, None)
-            if not t:
-                continue
-            for tg in t.get("tags") or []:
+        for r in rows:
+            for tg in db.unpack_list(r["tags"]):
                 tags.add(tg)
         return ok(sorted(tags))
 
@@ -194,44 +177,46 @@ def register(server) -> int:
 
 
 def _set_status(tid: str, status: str) -> str:
-    t, p = _find_anywhere(tid)
-    if not t or not p:
+    t = _get(tid)
+    if not t:
         return err("not_found", f"Todo '{tid}' not found.")
-    with file_lock(p):
-        t["status"] = status
-        t["completed"] = now_iso() if status == "done" else None
-        t["updated"] = now_iso()
-        save_json(p, t)
-    return ok(t)
+    with db.write_lock():
+        db.get_conn().execute(
+            "UPDATE todos SET status=?, completed=?, updated=? WHERE id=?",
+            (status, now_iso() if status == "done" else None, now_iso(), tid),
+        )
+    return ok(_get(tid))
 
 
 def _tag_op(tid: str, tag: str, add: bool) -> str:
-    t, p = _find_anywhere(tid)
-    if not t or not p:
+    t = _get(tid)
+    if not t:
         return err("not_found", f"Todo '{tid}' not found.")
-    with file_lock(p):
-        cur = set(t.get("tags") or [])
-        if add:
-            cur.add(tag)
-        else:
-            cur.discard(tag)
-        t["tags"] = sorted(cur)
-        t["updated"] = now_iso()
-        save_json(p, t)
-    return ok(t)
+    cur = set(t["tags"])
+    if add:
+        cur.add(tag)
+    else:
+        cur.discard(tag)
+    with db.write_lock():
+        db.get_conn().execute(
+            "UPDATE todos SET tags=?, updated=? WHERE id=?",
+            (db.pack_list(sorted(cur)), now_iso(), tid),
+        )
+    return ok(_get(tid))
 
 
 def _blocker_op(tid: str, blocker_id: str, add: bool) -> str:
-    t, p = _find_anywhere(tid)
-    if not t or not p:
+    t = _get(tid)
+    if not t:
         return err("not_found", f"Todo '{tid}' not found.")
-    with file_lock(p):
-        cur = set(t.get("blockers") or [])
-        if add:
-            cur.add(blocker_id)
-        else:
-            cur.discard(blocker_id)
-        t["blockers"] = sorted(cur)
-        t["updated"] = now_iso()
-        save_json(p, t)
-    return ok(t)
+    cur = set(t["blockers"])
+    if add:
+        cur.add(blocker_id)
+    else:
+        cur.discard(blocker_id)
+    with db.write_lock():
+        db.get_conn().execute(
+            "UPDATE todos SET blockers=?, updated=? WHERE id=?",
+            (db.pack_list(sorted(cur)), now_iso(), tid),
+        )
+    return ok(_get(tid))

@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+import db
 from storage import (
     atomic_write_text,
     err,
@@ -184,7 +185,8 @@ def register(server) -> int:
             else:
                 meta = _new_meta(tlist)
             _write_note(p, meta, content if content.endswith("\n") else content + "\n")
-            return ok({"name": name, "revision": meta["revision"]})
+        db.reindex_note(p.stem, project)
+        return ok({"name": p.stem, "revision": meta["revision"]})
 
     @server.tool()
     def note_rename(name: str, new_name: str, project: str = "", expected_revision: int = -1) -> str:
@@ -206,7 +208,9 @@ def register(server) -> int:
             _bump(meta)
             _write_note(np, meta, body)
             p.unlink()
-            return ok({"name": np.stem, "revision": meta["revision"]})
+        db.delete_note_from_index(p.stem, project)
+        db.reindex_note(np.stem, project)
+        return ok({"name": np.stem, "revision": meta["revision"]})
 
     @server.tool()
     def note_add_tags(name: str, tags: str, project: str = "") -> str:
@@ -237,7 +241,8 @@ def register(server) -> int:
             body += content if content.endswith("\n") else content + "\n"
             _bump(meta)
             _write_note(p, meta, body)
-            return ok({"name": name, "revision": meta["revision"]})
+        db.reindex_note(p.stem, project)
+        return ok({"name": p.stem, "revision": meta["revision"]})
 
     @server.tool()
     def note_append_section(name: str, heading: str, content: str, project: str = "") -> str:
@@ -255,7 +260,8 @@ def register(server) -> int:
                 return err("not_found", f"heading '{heading}' not found")
             _bump(meta)
             _write_note(p, meta, new_body)
-            return ok({"name": name, "revision": meta["revision"]})
+        db.reindex_note(p.stem, project)
+        return ok({"name": p.stem, "revision": meta["revision"]})
 
     @server.tool()
     def note_edit(name: str, content: str, project: str = "", section: str = "", line_start: int = 0, line_end: int = 0, expected_revision: int = -1) -> str:
@@ -287,7 +293,8 @@ def register(server) -> int:
                 return err("missing_arg", "provide either section or line_start+line_end")
             _bump(meta)
             _write_note(p, meta, new_body)
-            return ok({"name": name, "revision": meta["revision"]})
+        db.reindex_note(p.stem, project)
+        return ok({"name": p.stem, "revision": meta["revision"]})
 
     @server.tool()
     def note_clear(name: str, project: str = "", expected_revision: int = -1) -> str:
@@ -305,7 +312,8 @@ def register(server) -> int:
                 return check
             _bump(meta)
             _write_note(p, meta, "")
-            return ok({"name": name, "revision": meta["revision"]})
+        db.reindex_note(p.stem, project)
+        return ok({"name": p.stem, "revision": meta["revision"]})
 
     @server.tool()
     def note_delete(name: str, project: str = "", expected_revision: int = -1) -> str:
@@ -322,7 +330,8 @@ def register(server) -> int:
             if check:
                 return check
             p.unlink()
-            return ok({"deleted": name})
+        db.delete_note_from_index(p.stem, project)
+        return ok({"deleted": p.stem})
 
     @server.tool()
     def note_archive(name: str, project: str = "") -> str:
@@ -338,9 +347,36 @@ def register(server) -> int:
             meta["archived"] = True
             _bump(meta)
             _write_note(p, meta, body)
-            return ok({"name": name, "archived": True})
+        db.delete_note_from_index(p.stem, project)
+        return ok({"name": p.stem, "archived": True})
 
-    return 15
+    @server.tool()
+    def note_search(query: str, project: str = "", limit: int = 20, kinds: str = "note,project_doc") -> str:
+        """FTS5 search across notes and (optionally) project docs.
+
+        - query: FTS5 MATCH expression (e.g. 'foo bar', '"exact phrase"', 'foo OR bar').
+        - project: empty = search across ALL scopes (including _global and all projects);
+          named project = restrict to that scope only.
+        - kinds: comma-separated subset of {note, project_doc}.
+        Returns: list of {kind, project, name, title, snippet}.
+        """
+        if not query.strip():
+            return err("missing_arg", "query required")
+        klist = [k.strip() for k in kinds.split(",") if k.strip()]
+        for k in klist:
+            if k not in ("note", "project_doc"):
+                return err("invalid_arg", f"unknown kind '{k}'; use note,project_doc")
+        try:
+            rows = db.fts_search(query, project, limit, klist)
+        except Exception as ex:
+            return err("fts_error", str(ex))
+        return ok({"count": len(rows), "items": rows})
+
+    # Hooks for note tag changes — re-index so the FTS row's tags column stays fresh.
+    # _tag_op is at module scope; we wrap by re-indexing on every tag mutation
+    # via post-call reindex in note_add_tags / note_remove_tags handlers below.
+
+    return 16
 
 
 def _tag_op(name: str, project: str, tags: str, add: bool) -> str:
@@ -361,7 +397,8 @@ def _tag_op(name: str, project: str, tags: str, add: bool) -> str:
         meta["tags"] = sorted(cur)
         _bump(meta)
         _write_note(p, meta, body)
-        return ok({"name": name, "tags": meta["tags"], "revision": meta["revision"]})
+    db.reindex_note(p.stem, project)
+    return ok({"name": p.stem, "tags": meta["tags"], "revision": meta["revision"]})
 
 
 def _extract_section(body: str, heading: str) -> str | None:
