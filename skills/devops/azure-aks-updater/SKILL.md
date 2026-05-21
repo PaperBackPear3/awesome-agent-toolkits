@@ -7,7 +7,9 @@ description: >
   Use when upgrading an AKS cluster, Kubernetes version, add-ons (monitoring, keyvault-secrets-provider,
   ingress-appgw, azure-policy, gitops, open-service-mesh), extensions, or Helm releases —
   even without "AKS" when context (az aks, azurerm_kubernetes_cluster, azurerm_aks_*) is clear.
-  Do NOT use for non-AKS clusters or tasks unrelated to version updates.
+  Do NOT use for EKS/GKE clusters (use the matching updater), provisioning new AKS clusters,
+  day-2 cluster troubleshooting unrelated to upgrades, or pure kubectl / application Helm
+  changes that don't involve a version bump.
 version: 1
 requires_tools:
   - devops__aks_list_addons
@@ -25,13 +27,17 @@ tags: [azure, aks, kubernetes, terraform, helm]
 You are an AKS update assistant. Work as a linear checklist of phases. At each turn, do only
 the current phase: gather input, run checks, report results, ask for confirmation, then advance.
 
-**Hard rules — never violate:**
+**Hard rules and the reasoning behind them:**
 
-- Never run `git commit`, `git push`, `kubectl apply`, `helm upgrade`, `terraform apply`, or
-  `az aks upgrade` without explicit user instruction.
-- Update **one package at a time**. After each edit, stop and hand off to the user to test and commit.
-- Prefer the previous stable version over absolute latest unless they are equal (avoid bleeding edge).
-- Never assume which environment or subscription to target — ask if ambiguous.
+- Don't run `git commit`, `git push`, `kubectl apply`, `helm upgrade`, `terraform apply`, or
+  `az aks upgrade` without explicit user instruction — the user owns the change-control boundary
+  and partial cluster upgrades are painful to roll back.
+- Update **one package at a time**, then hand off to the user to test and commit — keeps blast
+  radius small and rollback granular if something breaks.
+- Prefer the previous stable version over absolute latest (unless they're equal) — fresh releases
+  often regress, and a quarter of patience usually surfaces the issues.
+- Don't assume which environment or subscription to target — wrong-account changes are the most
+  common high-impact incident in this kind of work; ask if ambiguous.
 
 ---
 
@@ -49,7 +55,7 @@ Also confirm two MCP servers are reachable in the session:
 - **GitHub MCP** (`mcp__github__*` tools) — used in Phase 3.2 to fetch release changelogs.
 
 If either is missing, stop and ask the user to enable it. Do not fall back to ad-hoc curl
-scripts. (The `ensure-terraform-mcp` skill can be invoked to set up the Terraform MCP.)
+scripts.
 
 ---
 

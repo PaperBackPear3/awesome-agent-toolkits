@@ -5,10 +5,11 @@ description: >
   Fetches the active todo list for the current project and executes each item:
   'always' todos run unconditionally, 'conditional' todos run only when their
   stated condition is met.
-  Use when the user asks to run post-work checks, when work is finishing and
-  there may be a checklist defined, or when the user says "check the post-work list".
-  Do NOT use for general task management, project planning, managing or editing
-  post-work todos, or any todo not scoped to post-work agent activities.
+  Use when the user asks to run post-work checks, when wrapping up a task, before committing,
+  when the user says "done", "finished", "wrap up", "ready to commit", or any signal that a
+  work session is concluding and a project checklist may exist.
+  Do NOT use for general task management, project planning, managing or editing post-work todos
+  (use agent-toolkit for that), or any todo not scoped to post-work agent activities.
 version: 1
 requires_mcp:
   - post-work-checks
@@ -31,13 +32,15 @@ Run this skill after finishing work to execute the project's post-work checklist
 
 ## Phase 1: Fetch the checklist
 
-Call `list_todos` with the current project path:
+Call the MCP tool `mcp__post-work-checks__list_todos` with the current project path (absolute):
 
 ```
-list_todos(project_path="<cwd>")
+mcp__post-work-checks__list_todos(project_path="<absolute-cwd>")
 ```
 
 If the result has zero todos, report "No post-work todos defined for this project" and stop.
+
+For status semantics and how to evaluate conditions, see `references/status-guide.md`.
 
 Display what will be executed before acting:
 
