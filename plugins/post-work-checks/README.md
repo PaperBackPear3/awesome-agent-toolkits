@@ -9,15 +9,15 @@ check for stale docs, etc. Each todo has a **status** that controls when it runs
 |--------|-----------|
 | `always` | Run every time work finishes |
 | `conditional` | Run only when the todo's `condition` is met (e.g. "if docs changed") |
-| `disabled` | Skip entirely |
+| `disabled` | Hidden from the workflow; skipped silently |
 
 ## MCP tools
 
 | Tool | What it does |
 |------|-------------|
-| `list_todos` | List all todos for a project path |
+| `list_todos` | List active todos (disabled excluded by default; pass `include_disabled=true` to see them) |
 | `create_todo` | Add a new todo |
-| `update_todo` | Edit title, description, or condition |
+| `update_todo` | Edit title, description, or condition (works on disabled todos too) |
 | `set_todo_status` | Toggle `always` / `conditional` / `disabled` |
 | `delete_todo` | Remove a todo permanently |
 
@@ -31,14 +31,15 @@ Override the directory with the `POST_WORK_CHECKS_HOME` env var.
 ## Installation
 
 ```bash
-# 1. Install the MCP server dependency
-pip install mcp
+# 1. Install the MCP server as a uv tool (one-time)
+cd plugins/post-work-checks/server
+uv tool install .
 
-# 2. Add the MCP server to your Claude Code settings
-#    (copy the mcpServers block from .mcp.json into ~/.claude/claude_desktop_config.json
-#     or point to this plugin directory)
+# 2. Add the MCP server to your Claude Code config
+#    Copy the mcpServers block from .mcp.json into your settings, or
+#    point Claude Code at this plugin directory.
 
-# 3. Restart Claude Code — the post-work-checks server will appear under /mcp
+# 3. Restart Claude Code — run /mcp to confirm post-work-checks is listed.
 ```
 
 ## Example: defining todos for a project
@@ -46,7 +47,13 @@ pip install mcp
 ```
 You: create a todo titled "Update README" with status always
 You: create a todo titled "Run type-check" with status conditional, condition "if TypeScript files changed"
-You: create a todo titled "Deploy to staging" with status disabled
 ```
 
 The `post-work-checks` skill will automatically run these checks at the end of each session.
+
+## Upgrading
+
+```bash
+cd plugins/post-work-checks/server
+uv tool install . --force
+```

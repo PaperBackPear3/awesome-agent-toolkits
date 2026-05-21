@@ -14,7 +14,6 @@ import json
 import os
 import uuid
 from pathlib import Path
-from typing import Literal
 
 from mcp.server.fastmcp import FastMCP
 
@@ -22,7 +21,6 @@ from mcp.server.fastmcp import FastMCP
 # Storage helpers
 # ---------------------------------------------------------------------------
 
-Status = Literal["always", "conditional", "disabled"]
 _VALID_STATUSES = {"always", "conditional", "disabled"}
 
 
@@ -54,7 +52,6 @@ def _save(data: dict[str, list[dict]]) -> None:
 
 
 def _resolve_project(project_path: str) -> str:
-    """Normalise to an absolute path string."""
     return str(Path(project_path).resolve())
 
 
@@ -67,29 +64,39 @@ mcp = FastMCP(
     instructions=(
         "Post-Work Checks MCP. Manages per-project checklists of tasks the agent "
         "should perform after finishing work. Each todo has a status: 'always' "
-        "(always run), 'conditional' (run only when a stated condition is met), or "
-        "'disabled' (skip). Pass the project directory as project_path; defaults to cwd."
+        "(always run) or 'conditional' (run only when a stated condition is met). "
+        "Disabled todos are hidden from normal listing — use include_disabled=true "
+        "only when managing (re-enabling) them. "
+        "Pass the project directory as project_path; defaults to cwd."
     ),
 )
 
 
 @mcp.tool()
-def list_todos(project_path: str = "") -> dict:
-    """List all post-work todos for a project.
+def list_todos(project_path: str = "", include_disabled: bool = False) -> dict:
+    """List post-work todos for a project.
 
-    Returns todos grouped by status so the agent can decide what to act on.
+    By default disabled todos are excluded — they don't appear in the workflow.
+    Set include_disabled=true only when you need to inspect or re-enable them.
+
     project_path: absolute or relative path to the project directory (defaults to cwd).
+    include_disabled: when true, disabled todos are included in the result.
     """
     project = _resolve_project(project_path or os.getcwd())
     data = _load()
-    todos = data.get(project, [])
+    all_todos = data.get(project, [])
+
+    if include_disabled:
+        todos = all_todos
+    else:
+        todos = [t for t in all_todos if t["status"] != "disabled"]
+
     return {
         "project": project,
         "todos": todos,
         "summary": {
             "always": sum(1 for t in todos if t["status"] == "always"),
             "conditional": sum(1 for t in todos if t["status"] == "conditional"),
-            "disabled": sum(1 for t in todos if t["status"] == "disabled"),
         },
     }
 
@@ -140,7 +147,9 @@ def update_todo(
 ) -> dict:
     """Update the content of an existing todo (title, description, condition).
 
+    Searches all todos including disabled ones so you can edit a todo before re-enabling it.
     To change status use set_todo_status instead.
+
     todo_id: the id field returned by list_todos or create_todo.
     project_path: project directory (defaults to cwd).
     """
@@ -172,9 +181,9 @@ def set_todo_status(
 
     'always'      — run this check every time work finishes.
     'conditional' — run only when the todo's condition is met (check condition field).
-    'disabled'    — skip this check entirely.
+    'disabled'    — exclude from workflow; hidden from list_todos unless include_disabled=true.
 
-    todo_id: the id field returned by list_todos.
+    todo_id: the id field returned by list_todos (use include_disabled=true to find disabled ones).
     project_path: project directory (defaults to cwd).
     """
     if status not in _VALID_STATUSES:
@@ -201,6 +210,7 @@ def delete_todo(
 ) -> dict:
     """Permanently delete a post-work todo.
 
+    Searches all todos including disabled ones.
     todo_id: the id field returned by list_todos.
     project_path: project directory (defaults to cwd).
     """
@@ -217,5 +227,9 @@ def delete_todo(
     return {"deleted": todo_id, "project": project}
 
 
-if __name__ == "__main__":
+def main() -> None:
     mcp.run()
+
+
+if __name__ == "__main__":
+    main()
