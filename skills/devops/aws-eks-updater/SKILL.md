@@ -1,17 +1,13 @@
 ---
 name: aws-eks-updater
 description: >
-  Interactive, safety-first skill for updating an AWS EKS cluster. Verifies prerequisites,
-  inventories the cluster from three sources (Terraform definitions, AWS-managed add-ons,
-  Helm releases), reconciles declared vs. installed versions, fetches GitHub changelogs and
-  scans them for breaking changes, then walks the user through updates one package at a time.
-  Auto-plans patch/minor bumps; proposes major bumps only when no breaking-change markers are
-  found and always with a written report. Never commits, pushes, or applies changes.
-  Use when the user mentions updating or upgrading an EKS cluster, bumping Kubernetes/k8s
-  versions, upgrading EKS add-ons (vpc-cni, coredns, kube-proxy, ebs-csi, efs-csi,
-  pod-identity-agent, adot, cloudwatch-observability), upgrading Helm releases on EKS,
-  checking EKS/add-on compatibility, or planning a control-plane minor bump — even without
-  the word "EKS" when context (eksctl, aws-auth configmap, terraform `aws_eks_*`) is clear.
+  Updates an AWS EKS cluster safely, one component at a time. Inventories Terraform definitions,
+  managed add-ons, and Helm releases; scans changelogs for breaking changes; edits files locally
+  without committing, pushing, or applying.
+  Use when upgrading an EKS cluster, Kubernetes version, add-ons (vpc-cni, coredns, kube-proxy,
+  ebs-csi, efs-csi, pod-identity-agent, adot, cloudwatch-observability), or Helm releases —
+  even without "EKS" when context (eksctl, aws-auth, aws_eks_*) is clear.
+  Do NOT use for non-EKS clusters or tasks unrelated to version updates.
 version: 1
 requires_tools:
   - devops__eks_list_addons
@@ -115,10 +111,6 @@ For each entry in `eks_module_calls`, use the **Terraform MCP server** to enrich
   - Parse the `ref` from the source URL; ask the GitHub MCP for that repo's latest release/tag
     to know what target version to recommend.
 
-The goal of this follow-up is to know, for each module call: _(a)_ the latest available
-module version, _(b)_ which input variable maps to the K8s control-plane version, and
-_(c)_ which input controls each add-on version — so Phase 4 can plan an exact edit.
-
 ### 2.2 AWS-managed add-ons (installed)
 
 Run `python3 tools/inventory_addons.py <cluster> <region> [profile]`. It produces, per add-on:
@@ -163,10 +155,8 @@ For each package compute:
 ### 3.2 Changelog scan (via GitHub MCP)
 
 For each package with a known GitHub repo, use the **GitHub MCP server** to list releases
-between `current` (exclusive) and `recommended` (inclusive). Typical MCP tool names:
-`mcp__github__list_releases`, `mcp__github__get_release_by_tag` — use whichever the MCP
-server exposes. Do not fall back to curl/scripts; if the MCP is unavailable, stop and ask
-the user to enable it.
+between `current` (exclusive) and `recommended` (inclusive). Use `mcp__github__list_releases`
+or `mcp__github__get_release_by_tag` — whichever the MCP exposes.
 
 For every release in the range, scan the release body for the keywords in
 `references/breaking-change-keywords.md` (case-insensitive substring match). Treat a
@@ -226,20 +216,14 @@ For each step show:
 
 ### 4.1 Generate the plan report
 
-After the plan is finalized and presented inline, also persist it as a standalone
-HTML artifact in the user's current working directory:
+Persist as a standalone HTML artifact:
 
 ```
 python3 tools/generate_report.py plan <cwd>/eks-update-plan-<cluster>-<YYYY-MM-DD>.html
 ```
 
-The script reads JSON on stdin matching the `plan` schema documented at the bottom
-of `tools/generate_report.py` (cluster, drift, decisions, plan, blocked). Build that
-JSON from the Phase 2–4 results and pipe it in.
-
-Tell the user the file path. The HTML is self-contained (no external assets) and
-suitable for attaching to a change-management ticket or sharing with reviewers.
-This is supplementary — the interactive confirmation flow still happens in chat.
+Pipe JSON (schema: cluster, drift, decisions, plan, blocked) from Phase 2–4 results.
+Tell the user the file path. The interactive confirmation flow continues in chat.
 
 ---
 
@@ -271,36 +255,24 @@ Note any deferred majors and what the user needs to investigate before tackling 
 
 ### 6.1 Generate the summary report
 
-Persist the final results as a standalone HTML artifact in the user's current
-working directory:
+Persist the final results as HTML:
 
 ```
 python3 tools/generate_report.py summary <cwd>/eks-update-summary-<cluster>-<YYYY-MM-DD>.html
 ```
 
-The script reads JSON on stdin matching the `summary` schema documented at the bottom
-of `tools/generate_report.py` (cluster, results, deferred_majors). Build that JSON
-from the actual outcomes of Phase 5 and pipe it in.
-
-Tell the user the file path. This is a separate file from the Phase 4 plan report —
-keep both; the plan documents intent, the summary documents what actually shipped.
+Pipe JSON (schema: cluster, results, deferred_majors) from Phase 5 outcomes. Keep both
+the plan and summary — they document intent vs. what shipped.
 
 ---
 
 ## Files in this skill
 
-- `tools/check_prereqs.py` — verifies binaries + AWS auth + kubectl context.
-- `tools/scan_terraform_eks.py` — extracts declared EKS resources/versions from Terraform.
-- `tools/inventory_addons.py` — lists installed EKS add-ons + latest compatible versions.
-- `tools/inventory_helm.py` — Helm releases as JSON.
-- `tools/generate_report.py` — renders the Phase 4 plan and Phase 6 summary as
-  self-contained HTML files (input JSON via stdin; schemas in the script's footer).
-- `assets/plan_template.html` — HTML template for the plan report.
-- `assets/summary_template.html` — HTML template for the summary report.
-- `references/breaking-change-keywords.md` — keyword list used to flag breaking changes
-  in release bodies returned by the GitHub MCP.
-- `references/eks-compatibility.md` — pointers to AWS docs for EKS/add-on K8s version support.
-- `agents/changelog-researcher.md` — subagent prompt for parallel changelog fetching via
-  the GitHub MCP server.
-
-Changelog retrieval is performed via the **GitHub MCP server** (no in-skill script).
+- `tools/check_prereqs.py` — verifies binaries, AWS auth, kubectl context
+- `tools/scan_terraform_eks.py` — extracts declared EKS resources/versions from Terraform
+- `tools/inventory_addons.py` — lists installed add-ons + latest compatible versions
+- `tools/inventory_helm.py` — Helm releases as JSON
+- `tools/generate_report.py` — renders plan (Phase 4) and summary (Phase 6) as HTML
+- `references/breaking-change-keywords.md` — keywords for changelog scanning
+- `references/eks-compatibility.md` — AWS docs for EKS/add-on K8s version support
+- `agents/changelog-researcher.md` — subagent for parallel changelog fetching
