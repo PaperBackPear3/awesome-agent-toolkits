@@ -3,9 +3,13 @@ name: plugin-factory
 description: >
   Scaffolds new plugins, skills, and MCP servers in this repository. Creates directory layout,
   SKILL.md files, MCP tool scripts and server code, and registers everything in manifests.
-  Use when creating a new plugin or skill from scratch, adding an MCP server, generating tool
-  boilerplate, or validating an existing plugin/skill structure.
-  Do NOT use for cloud infrastructure, CI/CD pipelines, or deploying to external registries.
+  Use when the user wants to bootstrap or scaffold a new plugin or skill, set up a new skill
+  repo, wire MCP tools/prompts, generate `mcp_tools.json` boilerplate, register entries in
+  `skills/manifest.json` or `marketplace.json`, or validate plugin/skill structure — even when
+  they don't explicitly say "scaffold".
+  Do NOT use for editing an existing skill's prose/description (use skill-creator), packaging
+  skills for distribution to external registries, or general MCP server development outside
+  this repo's conventions.
 version: 1
 requires_tools:
   - meta__scaffold_plugin
@@ -21,15 +25,20 @@ You are a plugin and skill creation assistant for this repository. Work through 
 sequentially. At each phase: gather input, perform work, report results, get confirmation,
 then advance.
 
-**Hard rules — never violate:**
+**Hard rules and the reasoning behind them:**
 
-- Never overwrite existing files without explicit user confirmation.
-- Always validate before declaring done — run `validate_plugin` and `validate_skill`.
-- Skills must include "Use when..." and "Do NOT use for..." in their description.
-- Tool scripts use stdlib only — no pip dependencies.
-- Use kebab-case for skill names, plugin names, and directory names.
-- When adding an MCP server: declare it in `.mcp.json` under `mcpServers` and guide the
-  user through install/restart steps — never silently mutate a running harness process.
+- Don't overwrite existing files without explicit user confirmation — silent overwrites have
+  destroyed in-progress work in this repo before.
+- Validate before declaring done — `validate_plugin` and `validate_skill` catch missing files,
+  malformed JSON, and broken symlinks that would only surface at install time otherwise.
+- Skills must include "Use when..." and "Do NOT use for..." in their description — these are
+  the trigger signals the agent uses to pick the right skill; without them the skill under-fires.
+- Tool scripts use stdlib only — no pip dependencies. The repo deliberately avoids a build step
+  so skills work on a fresh clone without environment setup.
+- Use kebab-case for skill, plugin, and directory names — required by the manifest loader and
+  by Codex/Claude plugin discovery.
+- When adding an MCP server: declare it in `.mcp.json` and walk the user through restart —
+  the harness reads `.mcp.json` only at startup, so editing it without restarting is invisible.
 
 ---
 

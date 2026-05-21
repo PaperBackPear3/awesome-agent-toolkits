@@ -6,7 +6,6 @@
 |--------|-------------|
 | `always` | The task should run unconditionally at the end of every work session. Examples: update CHANGELOG, run the formatter, ping a Slack channel. |
 | `conditional` | The task is only relevant when something specific happened. Examples: update README only if docs changed, run migrations only if schema files changed. |
-| `disabled` | You want to keep the todo definition but temporarily skip it. Use this instead of deleting when the task will be re-enabled later. |
 
 ## Writing good conditions
 
@@ -58,13 +57,6 @@ Update the README.
     "description": "Run tsc --noEmit and report any type errors introduced in this session.",
     "status": "conditional",
     "condition": "if any TypeScript files were modified"
-  },
-  {
-    "id": "i9j0k1l2",
-    "title": "Deploy to staging",
-    "description": "Run make deploy-staging and confirm the deployment succeeds.",
-    "status": "disabled",
-    "condition": ""
   }
 ]
 ```

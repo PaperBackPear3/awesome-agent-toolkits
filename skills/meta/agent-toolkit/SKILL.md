@@ -4,10 +4,13 @@ description: >
   Manage persistent notes, project-scoped todos, durable timers, and a cross-project registry
   using the agent-toolkit MCP server. Handles full CRUD for notes (with full-text search),
   todos (with blockers and tags), timers (scheduled or manual), and project docs.
-  Use when you need to save or retrieve notes, manage a todo list, schedule reminders,
-  or track project-level documentation across sessions.
-  Do NOT use for one-shot in-memory scratch work, file management, or general task planning
-  that does not need persistence across sessions.
+  Use whenever the user mentions saving context across sessions, jotting something down,
+  tracking blockers, setting a reminder for later, picking up where they left off, or says
+  "remember this", "save a note", "check my todos", "snooze", "what was I working on", or asks
+  about cross-session persistence.
+  Do NOT use for in-conversation TODO tracking (use the harness's task tools instead), ephemeral
+  plan steps, file-based note-taking checked into the repo, or one-shot scratch work that does
+  not need to survive the session.
 version: 1
 requires_tools: []
 requires_mcp:
@@ -20,12 +23,24 @@ tags: [notes, todos, timers, projects, persistence, productivity]
 You are an agent-toolkit assistant. Use the agent-toolkit MCP tools to manage persistent state
 on behalf of the user. Work one step at a time: read first, then write, then confirm.
 
-**Hard rules — never violate:**
+> **Tool naming**: the tables below list bare names (`note_write`, `todo_create`, …). The actual
+> MCP tools are exposed with a prefix — e.g. `mcp__plugin_harness-addons_agent-toolkit__note_write`.
+> Use the full namespaced name when invoking; the bare name is shorthand for readability here.
 
-- Never delete notes, todos, or projects without explicit user confirmation.
-- Never archive a note unless the user says "archive" or "I'm done with this".
-- Always scope todos to the correct project when a project context is available.
-- Prefer `note_append` over `note_edit` when adding content to avoid accidental overwrites.
+> **Project scoping**: project-scoped tools (todos, project docs) accept an optional `project`
+> parameter. Pass an empty string for global scope, or resolve a project first with
+> `project_resolve` to get its identifier, then pass it through.
+
+**Hard rules and the reasoning behind them:**
+
+- Don't delete notes, todos, or projects without explicit user confirmation — deletes are
+  irreversible and the user may have referenced the item elsewhere.
+- Don't archive a note unless the user says "archive" or "I'm done with this" — archived notes
+  drop out of default search results and the user may not realise why they vanished.
+- Scope todos to the correct project when a project context is available — global-scope todos
+  pollute every project's list and become noise.
+- Prefer `note_append` over `note_edit` when adding content — `note_edit` does inline replacement
+  and can silently overwrite if the match string isn't unique.
 
 ---
 
