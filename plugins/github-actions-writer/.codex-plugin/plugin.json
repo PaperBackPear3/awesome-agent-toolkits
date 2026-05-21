@@ -1,0 +1,19 @@
+{
+  "name": "github-actions-writer",
+  "version": "1.0.0",
+  "description": "Interactive, safety-first skill for creating, updating, and migrating GitHub Actions workflows.",
+  "author": { "name": "PaperBackPear3" },
+  "homepage": "https://github.com/PaperBackPear3/awesome-agent-toolkits",
+  "repository": "https://github.com/PaperBackPear3/awesome-agent-toolkits",
+  "license": "MIT",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "GitHub Actions Writer",
+    "shortDescription": "Create, update, and migrate GitHub Actions workflows",
+    "longDescription": "Safety-first skill for writing GitHub Actions workflows from scratch, updating existing ones, and migrating from Jenkins, GitLab CI, CircleCI, or Azure Pipelines. Scans existing configs, designs multi-environment pipelines with OIDC and approval gates, generates YAML one file at a time, and validates for correctness and security best practices.",
+    "developerName": "PaperBackPear3",
+    "category": "DevOps",
+    "capabilities": ["Read", "Write"]
+  }
+}

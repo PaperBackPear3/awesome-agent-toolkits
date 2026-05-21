@@ -1,0 +1,10 @@
+{
+  "name": "github-actions-writer",
+  "version": "1.0.0",
+  "description": "Interactive, safety-first skill for creating, updating, and migrating GitHub Actions workflows. Inventories existing CI configs, designs multi-environment pipelines, generates YAML one file at a time, and validates for correctness and security.",
+  "author": { "name": "PaperBackPear3" },
+  "homepage": "https://github.com/PaperBackPear3/awesome-agent-toolkits",
+  "repository": "https://github.com/PaperBackPear3/awesome-agent-toolkits",
+  "license": "MIT",
+  "keywords": ["devops", "github-actions", "ci-cd", "pipelines", "migration"]
+}
