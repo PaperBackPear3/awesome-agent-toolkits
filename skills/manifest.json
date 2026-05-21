@@ -92,6 +92,24 @@
         "skill",
         "creation"
       ]
+    },
+    {
+      "name": "post-work-checks",
+      "category": "meta",
+      "version": 1,
+      "path": "meta/post-work-checks",
+      "description": "Run through a project's post-work checklist after the agent finishes a task. Fetches todos scoped to the current project directory and acts on each one according to its status: executes 'always' todos unconditionally, evaluates the condition for 'conditional' todos and acts only when the condition is met, and skips 'disabled' todos. Use when the user asks to run post-work checks, when work is finishing and there may be a checklist defined, or when managing post-work todos. Do NOT use for general task management or project planning.",
+      "requires_tools": [],
+      "requires_mcp": [
+        "post-work-checks"
+      ],
+      "tags": [
+        "productivity",
+        "checklist",
+        "post-work",
+        "todos",
+        "agent"
+      ]
     }
   ]
 }

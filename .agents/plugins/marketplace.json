@@ -36,6 +36,17 @@
         "installation": "AVAILABLE"
       },
       "category": "Meta"
+    },
+    {
+      "name": "post-work-checks",
+      "source": {
+        "source": "local",
+        "path": "./plugins/post-work-checks"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Productivity"
     }
   ]
 }

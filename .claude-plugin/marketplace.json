@@ -49,6 +49,20 @@
         "skill",
         "creation"
       ]
+    },
+    {
+      "name": "post-work-checks",
+      "description": "Per-project post-work todo lists — define tasks the agent runs after finishing work, with always/conditional/disabled status control",
+      "source": "./plugins/post-work-checks",
+      "version": "1.0.0",
+      "category": "productivity",
+      "keywords": [
+        "productivity",
+        "todos",
+        "post-work",
+        "checklist",
+        "agent"
+      ]
     }
   ]
 }

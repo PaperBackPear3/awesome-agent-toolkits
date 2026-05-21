@@ -1,0 +1,13 @@
+{
+  "name": "post-work-checks",
+  "version": "1.0.0",
+  "description": "Per-project post-work todo lists. Define tasks the agent must run after finishing work — always, conditionally, or disabled.",
+  "mcpServers": {
+    "post-work-checks": {
+      "command": "python3",
+      "args": ["plugins/post-work-checks/server/server.py"],
+      "env": {}
+    }
+  },
+  "skills": ["meta/post-work-checks"]
+}

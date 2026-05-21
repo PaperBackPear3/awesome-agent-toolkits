@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "post-work-checks": {
+      "command": "python3",
+      "args": ["plugins/post-work-checks/server/server.py"],
+      "env": {}
+    }
+  }
+}
