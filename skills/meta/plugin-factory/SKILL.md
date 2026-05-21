@@ -1,18 +1,11 @@
 ---
 name: plugin-factory
 description: >
-  Create new plugins, skills, and MCP servers for this repository. Scaffolds complete plugin
-  structures (directory layout, .claude-plugin, .codex-plugin, .mcp.json, marketplace
-  registration), writes SKILL.md files with proper frontmatter and phased workflows,
-  generates MCP tool scripts, writes MCP server code, validates everything, and registers
-  in manifests.
-  Use when the user wants to create a new plugin, add a new skill to the repository,
-  scaffold a plugin or skill from scratch, generate MCP tool boilerplate, validate an
-  existing skill or plugin structure, register something in the marketplace, add or create
-  an MCP server, configure an MCP server for a plugin, or integrate a new MCP server into
-  the harness.
-  Do NOT use for managing cloud infrastructure, CI/CD pipelines, or deploying plugins to
-  external registries outside this repository.
+  Scaffolds new plugins, skills, and MCP servers in this repository. Creates directory layout,
+  SKILL.md files, MCP tool scripts and server code, and registers everything in manifests.
+  Use when creating a new plugin or skill from scratch, adding an MCP server, generating tool
+  boilerplate, or validating an existing plugin/skill structure.
+  Do NOT use for cloud infrastructure, CI/CD pipelines, or deploying to external registries.
 version: 1
 requires_tools:
   - meta__scaffold_plugin
@@ -237,17 +230,14 @@ skills/<category>/<skill-name>/
 
 ### 3b. Write the SKILL.md body
 
-Help the user write the skill body. Follow these principles:
+Help the user write the skill body:
 
-- **Progressive disclosure** — keep SKILL.md under 500 lines; use references/ for deep dives
-- **Phases are linear** — the agent works through them one at a time
-- **Imperative form** — "Run X", "Check Y", not "You should run X"
-- **Explain the why** — don't just say ALWAYS/NEVER, explain reasoning
-- **Hard rules section** — list absolute constraints at the top
-- **Tables for structured data** — compatibility matrices, parameter lists
-- **Examples** — include input/output examples where helpful
+- Keep under 500 lines; put deep docs in `references/`
+- Phases are linear — agent works through them one at a time
+- Imperative form: "Run X", not "You should run X"
+- Hard rules section at the top; explain the why, not just ALWAYS/NEVER
 
-Reference `references/skill-writing-guide.md` for the full guide.
+See `references/skill-writing-guide.md` for the full guide.
 
 ### 3c. Add MCP tools (if needed)
 
@@ -282,10 +272,8 @@ Run `meta__validate_plugin` on the plugin directory. It checks:
 - Skills symlinks resolve
 - If `.mcp.json` declares `mcpServers`, confirm the referenced command/script exists
 
-If the plugin includes an MCP server (Phase 2b), also verify manually:
-- The server script is executable and runs without import errors:
-  `python3 plugins/<plugin-name>/server/server.py --help` (or equivalent)
-- The `mcpServers` entry in `.mcp.json` uses the correct command and args
+If Phase 2b: verify `python3 plugins/<plugin-name>/server/server.py --help` runs cleanly
+and `.mcp.json` `mcpServers` entry uses correct command/args.
 
 Run `meta__validate_skill` on each skill directory. It checks:
 - SKILL.md exists and has valid frontmatter

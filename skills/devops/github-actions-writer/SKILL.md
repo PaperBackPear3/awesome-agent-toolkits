@@ -1,21 +1,13 @@
 ---
 name: github-actions-writer
 description: >
-  Interactive, safety-first skill for creating, updating, migrating, and managing GitHub Actions
-  workflows. Inventories existing CI/CD configuration, designs workflow architecture for complex
-  multi-environment release pipelines (dev → staging → production with approvals, matrices,
-  reusable workflows, and environment protection rules), generates or edits workflow YAML files
-  one at a time, and validates them for correctness and security best practices. Supports
-  migration from Jenkins, GitLab CI, CircleCI, and Azure Pipelines. Never commits or pushes
-  without explicit user instruction.
-  Use when the user mentions creating GitHub Actions workflows, writing CI/CD pipelines for
-  GitHub, setting up deployment pipelines, migrating from Jenkins/GitLab CI/CircleCI/Azure
-  Pipelines to GitHub Actions, configuring multi-environment deployments, managing reusable
-  workflows, composite actions, workflow_dispatch inputs, environment protection rules, OIDC
-  authentication in pipelines, matrix strategies, or release automation — even without the
-  words "GitHub Actions" when context (.github/workflows, uses:, runs-on:, on: push) is clear.
-  Do NOT use for non-GitHub CI/CD systems as the target platform, GitHub Apps/OAuth setup,
-  GitHub Pages configuration, or repository settings unrelated to Actions.
+  Creates, updates, and migrates GitHub Actions workflows. Inventories existing CI/CD configs,
+  designs multi-environment pipelines, generates YAML one file at a time, and validates for
+  correctness and security. Never commits or pushes without explicit instruction.
+  Use when writing GitHub Actions workflows, migrating from Jenkins/GitLab CI/CircleCI/Azure Pipelines,
+  or setting up multi-environment deployments with OIDC, matrices, and approval gates — even without
+  "GitHub Actions" when context (.github/workflows, uses:, runs-on:) is clear.
+  Do NOT use for non-GitHub CI systems, GitHub Apps/OAuth, or repository settings unrelated to Actions.
 version: 1
 requires_tools:
   - devops__gha_list_workflows
@@ -192,38 +184,22 @@ If migration, also show:
 
 ### 6.1 Generate pipeline report
 
-Persist the final results as a standalone HTML artifact in the user's current working directory:
-
 ```
 python3 tools/generate_report.py pipeline <cwd>/github-actions-report-<YYYY-MM-DD>.html
 ```
 
-The script reads JSON on stdin matching the `pipeline` schema documented at the bottom of
-`tools/generate_report.py` (workflows, environments, migration_gaps, next_steps). Build that
-JSON from the Phase 2–6 results and pipe it in.
-
-Tell the user the file path. The HTML is self-contained (no external assets) and suitable for
-attaching to a change-management ticket or sharing with reviewers.
+Pipe JSON (schema: workflows, environments, migration_gaps, next_steps) from Phase 2–6 results.
+Tell the user the file path.
 
 ---
 
 ## Files in this skill
 
-- `tools/scan_workflows.py` — inventories existing `.github/workflows/*.yml` files.
-- `tools/scan_ci_config.py` — detects and parses non-GitHub CI/CD configs for migration.
-- `tools/validate_workflow.py` — validates workflow YAML for correctness and best practices.
-- `tools/generate_report.py` — renders the Phase 6 summary as a self-contained HTML file
-  (input JSON via stdin; schema in the script's footer).
-- `tools/mcp_tools.json` — MCP tool declarations for auto-discovery.
-- `tools/mcp_prompts.json` — MCP prompt declarations for auto-discovery.
-- `references/environment-patterns.md` — multi-environment deployment patterns and examples.
-- `references/actions-best-practices.md` — security and performance best practices for
-  GitHub Actions workflows.
-- `references/migration-mappings.md` — concept mapping from Jenkins/GitLab CI/CircleCI/Azure
-  Pipelines to GitHub Actions.
-- `agents/migration-analyzer.md` — subagent prompt for analyzing complex CI/CD configs during
-  migration.
-- `assets/pipeline_report_template.html` — HTML template for the pipeline report.
-
-Workflow YAML generation and GitHub API interaction is done via the **GitHub MCP server**
-(no in-skill scripts for that).
+- `tools/scan_workflows.py` — inventories existing `.github/workflows/*.yml` files
+- `tools/scan_ci_config.py` — detects and parses non-GitHub CI/CD configs for migration
+- `tools/validate_workflow.py` — validates workflow YAML for correctness and best practices
+- `tools/generate_report.py` — renders Phase 6 summary as HTML
+- `references/environment-patterns.md` — multi-environment deployment patterns
+- `references/actions-best-practices.md` — security and performance best practices
+- `references/migration-mappings.md` — concept mapping from Jenkins/GitLab CI/CircleCI/Azure Pipelines
+- `agents/migration-analyzer.md` — subagent for analyzing complex CI/CD configs

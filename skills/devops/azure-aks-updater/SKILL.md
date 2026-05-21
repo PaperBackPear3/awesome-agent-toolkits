@@ -1,17 +1,13 @@
 ---
 name: azure-aks-updater
 description: >
-  Interactive, safety-first skill for updating an Azure AKS cluster. Verifies prerequisites,
-  inventories the cluster from three sources (Terraform definitions, Azure-managed add-ons/extensions,
-  Helm releases), reconciles declared vs. installed versions, fetches GitHub changelogs and
-  scans them for breaking changes, then walks the user through updates one package at a time.
-  Auto-plans patch/minor bumps; proposes major bumps only when no breaking-change markers are
-  found and always with a written report. Never commits, pushes, or applies changes.
-  Use when the user mentions updating or upgrading an AKS cluster, bumping Kubernetes/k8s
-  versions, upgrading AKS add-ons (monitoring, keyvault-secrets-provider, ingress-appgw,
-  azure-policy, gitops, open-service-mesh), upgrading AKS extensions, upgrading Helm releases
-  on AKS, checking add-on compatibility, or planning a control-plane bump — even without
-  "AKS" when context (az aks, azurerm_kubernetes_cluster, terraform `azurerm_aks_*`) is clear.
+  Updates an Azure AKS cluster safely, one component at a time. Inventories Terraform definitions,
+  managed add-ons/extensions, and Helm releases; scans changelogs for breaking changes; edits files
+  locally without committing, pushing, or applying.
+  Use when upgrading an AKS cluster, Kubernetes version, add-ons (monitoring, keyvault-secrets-provider,
+  ingress-appgw, azure-policy, gitops, open-service-mesh), extensions, or Helm releases —
+  even without "AKS" when context (az aks, azurerm_kubernetes_cluster, azurerm_aks_*) is clear.
+  Do NOT use for non-AKS clusters or tasks unrelated to version updates.
 version: 1
 requires_tools:
   - devops__aks_list_addons
@@ -114,10 +110,6 @@ For each entry in `aks_module_calls`, use the **Terraform MCP server** to enrich
   - Parse the `ref` from the source URL; ask the GitHub MCP for that repo's latest release/tag
     to know what target version to recommend.
 
-The goal of this follow-up is to know, for each module call: _(a)_ the latest available
-module version, _(b)_ which input variable maps to the K8s control-plane version, and
-_(c)_ which input controls each add-on/extension version — so Phase 4 can plan an exact edit.
-
 ### 2.2 Azure-managed add-ons and extensions (installed)
 
 Run `python3 tools/inventory_addons.py <cluster> <resource-group> [subscription-id]`. It produces:
@@ -165,10 +157,8 @@ For each package compute:
 ### 3.2 Changelog scan (via GitHub MCP)
 
 For each package with a known GitHub repo, use the **GitHub MCP server** to list releases
-between `current` (exclusive) and `recommended` (inclusive). Typical MCP tool names:
-`mcp__github__list_releases`, `mcp__github__get_release_by_tag` — use whichever the MCP
-server exposes. Do not fall back to curl/scripts; if the MCP is unavailable, stop and ask
-the user to enable it.
+between `current` (exclusive) and `recommended` (inclusive). Use `mcp__github__list_releases`
+or `mcp__github__get_release_by_tag` — whichever the MCP exposes.
 
 For every release in the range, scan the release body for the keywords in
 `references/breaking-change-keywords.md` (case-insensitive substring match). Treat a
@@ -229,20 +219,14 @@ For each step show:
 
 ### 4.1 Generate the plan report
 
-After the plan is finalized and presented inline, also persist it as a standalone
-HTML artifact in the user's current working directory:
+Persist as a standalone HTML artifact:
 
 ```
 python3 tools/generate_report.py plan <cwd>/aks-update-plan-<cluster>-<YYYY-MM-DD>.html
 ```
 
-The script reads JSON on stdin matching the `plan` schema documented at the bottom
-of `tools/generate_report.py` (cluster, drift, decisions, plan, blocked). Build that
-JSON from the Phase 2–4 results and pipe it in.
-
-Tell the user the file path. The HTML is self-contained (no external assets) and
-suitable for attaching to a change-management ticket or sharing with reviewers.
-This is supplementary — the interactive confirmation flow still happens in chat.
+Pipe JSON (schema: cluster, drift, decisions, plan, blocked) from Phase 2–4 results.
+Tell the user the file path. The interactive confirmation flow continues in chat.
 
 ---
 
@@ -274,36 +258,24 @@ Note any deferred majors and what the user needs to investigate before tackling 
 
 ### 6.1 Generate the summary report
 
-Persist the final results as a standalone HTML artifact in the user's current
-working directory:
+Persist the final results as HTML:
 
 ```
 python3 tools/generate_report.py summary <cwd>/aks-update-summary-<cluster>-<YYYY-MM-DD>.html
 ```
 
-The script reads JSON on stdin matching the `summary` schema documented at the bottom
-of `tools/generate_report.py` (cluster, results, deferred_majors). Build that JSON
-from the actual outcomes of Phase 5 and pipe it in.
-
-Tell the user the file path. This is a separate file from the Phase 4 plan report —
-keep both; the plan documents intent, the summary documents what actually shipped.
+Pipe JSON (schema: cluster, results, deferred_majors) from Phase 5 outcomes. Keep both
+the plan and summary — they document intent vs. what shipped.
 
 ---
 
 ## Files in this skill
 
-- `tools/check_prereqs.py` — verifies binaries + Azure auth + kubectl context.
-- `tools/scan_terraform_aks.py` — extracts declared AKS resources/versions from Terraform.
-- `tools/inventory_addons.py` — lists installed AKS add-ons, extensions + available upgrade versions.
-- `tools/inventory_helm.py` — Helm releases as JSON.
-- `tools/generate_report.py` — renders the Phase 4 plan and Phase 6 summary as
-  self-contained HTML files (input JSON via stdin; schemas in the script's footer).
-- `assets/plan_template.html` — HTML template for the plan report.
-- `assets/summary_template.html` — HTML template for the summary report.
-- `references/breaking-change-keywords.md` — keyword list used to flag breaking changes
-  in release bodies returned by the GitHub MCP.
-- `references/aks-compatibility.md` — pointers to Azure docs for AKS/add-on K8s version support.
-- `agents/changelog-researcher.md` — subagent prompt for parallel changelog fetching via
-  the GitHub MCP server.
-
-Changelog retrieval is performed via the **GitHub MCP server** (no in-skill script).
+- `tools/check_prereqs.py` — verifies binaries, Azure auth, kubectl context
+- `tools/scan_terraform_aks.py` — extracts declared AKS resources/versions from Terraform
+- `tools/inventory_addons.py` — lists installed add-ons, extensions + available upgrade versions
+- `tools/inventory_helm.py` — Helm releases as JSON
+- `tools/generate_report.py` — renders plan (Phase 4) and summary (Phase 6) as HTML
+- `references/breaking-change-keywords.md` — keywords for changelog scanning
+- `references/aks-compatibility.md` — Azure docs for AKS/add-on K8s version support
+- `agents/changelog-researcher.md` — subagent for parallel changelog fetching
