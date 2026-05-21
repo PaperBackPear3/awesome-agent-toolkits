@@ -51,6 +51,20 @@
       ]
     },
     {
+      "name": "github-actions-writer",
+      "description": "Interactive, safety-first skill for creating, updating, and migrating GitHub Actions workflows with multi-environment pipelines",
+      "source": "./plugins/github-actions-writer",
+      "version": "1.0.0",
+      "category": "devops",
+      "keywords": [
+        "devops",
+        "github-actions",
+        "ci-cd",
+        "pipelines",
+        "migration"
+      ]
+    },
+    {
       "name": "post-work-checks",
       "description": "Per-project post-work todo lists — define tasks the agent runs after finishing work, with always/conditional/disabled status control",
       "source": "./plugins/post-work-checks",

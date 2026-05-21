@@ -94,6 +94,25 @@
       ]
     },
     {
+      "name": "agent-toolkit",
+      "category": "meta",
+      "version": 1,
+      "path": "meta/agent-toolkit",
+      "description": "Manage persistent notes, project-scoped todos, durable timers, and a cross-project registry using the agent-toolkit MCP server. Use when you need to save or retrieve notes, manage a todo list, schedule reminders, or track project-level documentation across sessions.",
+      "requires_tools": [],
+      "requires_mcp": [
+        "agent-toolkit"
+      ],
+      "tags": [
+        "notes",
+        "todos",
+        "timers",
+        "projects",
+        "persistence",
+        "productivity"
+      ]
+    },
+    {
       "name": "post-work-checks",
       "category": "meta",
       "version": 1,

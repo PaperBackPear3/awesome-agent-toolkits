@@ -38,6 +38,17 @@
       "category": "Meta"
     },
     {
+      "name": "github-actions-writer",
+      "source": {
+        "source": "local",
+        "path": "./plugins/github-actions-writer"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "DevOps"
+    },
+    {
       "name": "post-work-checks",
       "source": {
         "source": "local",
