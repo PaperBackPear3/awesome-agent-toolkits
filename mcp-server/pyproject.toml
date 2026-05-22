@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-toolkit-mcp-server"
-version = "0.3.0"
+version = "0.4.0"
 description = "MCP server providing persistent notes, todos, timers, and a cross-project registry — capabilities that augment Claude Code's built-in harness."
 readme = "README.md"
 requires-python = ">=3.10"
