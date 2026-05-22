@@ -8,22 +8,17 @@ Skills can encode expertise from **any domain**: DevOps, security, data engineer
 
 ### Claude Code / GitHub Copilot
 
-Add the Marketplace
+Add the marketplace, then install one or more plugins:
 
 ```bash
 /plugin marketplace add PaperBackPear3/awesome-agent-toolkits
+/plugin install devops-core@awesome-agent-toolkits
 ```
 
-Install a plugin (e.g. the DevOps plugin — one of the available plugins):
+Browse everything available:
 
 ```bash
-plugin add github:PaperBackPear3/awesome-agent-toolkits/plugins/devops-core
-```
-
-or browse the Marketplace
-
-```bash
-/plugin marketplace browse awesome-agent-toolkit
+/plugin marketplace browse awesome-agent-toolkits
 ```
 
 ### Codex
@@ -41,10 +36,10 @@ or browse the Marketplace
 Copy a skill into your agent's skill directory:
 
 ```bash
-cp -r skills/devops/aws-eks-updater ~/.agents/skills/
+cp -r skills/devops/aws-eks-updater ~/.claude/skills/
 ```
 
-Or point your agent at the MCP server to augment its harness with persistent notes, todos, timers, and a cross-project registry:
+Or point your agent at the Agent Toolkit MCP server to augment its harness with persistent notes, todos, timers, and a cross-project registry:
 
 ```json
 {
@@ -61,30 +56,37 @@ Or point your agent at the MCP server to augment its harness with persistent not
 
 ### Plugins
 
-| Plugin        | Category                 | Description                                                 | Status       |
-| ------------- | ------------------------ | ----------------------------------------------------------- | ------------ |
-| `devops-core` | DevOps                   | Kubernetes cluster update skills (EKS + AKS) with MCP tools | ✅ Available |
-| _more coming_ | Security, Data, Finance… | Community and first-party plugins                           | 🚧 Planned   |
+| Plugin                  | Category     | Description                                                                                    |
+| ----------------------- | ------------ | ---------------------------------------------------------------------------------------------- |
+| `devops-core`           | DevOps       | Kubernetes cluster update skills (EKS + AKS) with MCP tools                                    |
+| `github-actions-writer` | DevOps       | Author, update, and migrate GitHub Actions workflows with multi-environment release pipelines  |
+| `harness-addons`        | Productivity | Exposes the agent-toolkit MCP (notes, todos, timers, projects) as harness add-ons              |
+| `post-work-checks`      | Productivity | Per-project post-work todo lists that run when the agent finishes a task                       |
+| `plugin-factory`        | Meta         | Meta-plugin for scaffolding new plugins and skills inside this repository                      |
 
-### Skills (via `devops-core`)
+### Skills
 
-| Skill                                                           | Description                                    |
-| --------------------------------------------------------------- | ---------------------------------------------- |
-| [`aws-eks-updater`](skills/devops/aws-eks-updater/SKILL.md)     | Interactive, safety-first EKS cluster upgrades |
-| [`azure-aks-updater`](skills/devops/azure-aks-updater/SKILL.md) | Interactive, safety-first AKS cluster upgrades |
+| Skill                                                                   | Category | Description                                                                          |
+| ----------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------ |
+| [`aws-eks-updater`](skills/devops/aws-eks-updater/SKILL.md)             | devops   | Interactive, safety-first EKS cluster upgrades                                       |
+| [`azure-aks-updater`](skills/devops/azure-aks-updater/SKILL.md)         | devops   | Interactive, safety-first AKS cluster upgrades                                       |
+| [`github-actions-writer`](skills/devops/github-actions-writer/SKILL.md) | devops   | Create, update, and migrate GitHub Actions workflows for complex release pipelines   |
+| [`agent-toolkit`](skills/meta/agent-toolkit/SKILL.md)                   | meta     | Drive the agent-toolkit MCP (notes, todos, timers, projects)                         |
+| [`plugin-factory`](skills/meta/plugin-factory/SKILL.md)                 | meta     | Scaffold and validate new plugins/skills in this repository                          |
+| [`post-work-checks`](skills/meta/post-work-checks/SKILL.md)             | meta     | Run a project's post-work checklist after the agent finishes a task                  |
 
 ### MCP Server
 
-The MCP server (published as `agent-toolkit-mcp-server` via uvx) augments an agent's harness with capabilities Claude Code does not provide natively:
+The `agent-toolkit-mcp-server` (published on PyPI; run via `uvx`) augments an agent's harness with capabilities Claude Code does not provide natively:
 
-| Area         | What it adds                                                                    | Tools |
-| ------------ | ------------------------------------------------------------------------------- | ----- |
-| **Notes**    | Persistent, named markdown notes (plans, designs, scratch) with tags & revisions | 15    |
-| **Todos**    | Cross-session todo lists, optionally project-scoped, with blockers              | 11    |
-| **Timers**   | Durable scheduled/recurring wake-ups; agents poll fired events                  | 7     |
-| **Projects** | Cross-project registry — register repos/folders by name and reference them anywhere | 6     |
+| Area         | What it adds                                                                          | Tools |
+| ------------ | ------------------------------------------------------------------------------------- | ----- |
+| **Notes**    | Persistent, named markdown notes (plans, designs, scratch) with tags, revisions, FTS5 | 16    |
+| **Todos**    | Cross-session todo lists, optionally project-scoped, with blockers and tags           | 11    |
+| **Timers**   | Durable scheduled/recurring wake-ups; agents poll fired events                        | 7     |
+| **Projects** | Cross-project registry — register repos/folders by name, attach markdown docs         | 10    |
 
-All state lives under `~/.agent-toolkit/` (overridable via `AGENT_TOOLKIT_HOME`). See [`mcp-server/README.md`](mcp-server/README.md) for the full tool index and storage layout, and [`docs/CLAUDE_CODE_CAPABILITIES.md`](docs/CLAUDE_CODE_CAPABILITIES.md) for what's already built into Claude Code (so you know what this MCP intentionally does not duplicate).
+All state lives under `~/.agent-toolkit/` (overridable via `AGENT_TOOLKIT_HOME`). See [`mcp-server/README.md`](mcp-server/README.md) for the full tool index and storage layout.
 
 ## Repository Structure
 
@@ -94,13 +96,17 @@ All state lives under `~/.agent-toolkit/` (overridable via `AGENT_TOOLKIT_HOME`)
 .claude-plugin/         # Claude Code marketplace index
 .agents/plugins/        # Kiro/generic agent marketplace index
 plugins/                # Installable plugin packages
-  devops-core/          #   └─ DevOps plugin (skills + MCP config)
+  devops-core/            #   ├─ EKS + AKS updater skills
+  github-actions-writer/  #   ├─ GitHub Actions workflow authoring
+  harness-addons/         #   ├─ Wires up the agent-toolkit MCP
+  plugin-factory/         #   ├─ Meta-plugin: scaffold new plugins/skills
+  post-work-checks/       #   └─ Per-project post-work checklist runner
 skills/                 # Canonical skill definitions
-  devops/               #   └─ DevOps skills (EKS, AKS)
-    aws-eks-updater/
-    azure-aks-updater/
+  devops/                 #   ├─ DevOps skills
+  meta/                   #   └─ Meta skills (toolkit, factory, post-work)
+  manifest.json           #   skill registry — keep in sync when adding/removing
 rules/                  # Agent behavior rules
-mcp-server/             # MCP server implementation
+mcp-server/             # agent-toolkit MCP server (Python, stdlib-friendly)
 docs/                   # Documentation
 ```
 
@@ -113,7 +119,6 @@ docs/                   # Documentation
 | [Quick Reference Guide](docs/GUIDE.md)              | Architecture, concepts, conventions                |
 | [Best Practices](docs/BEST_PRACTICES.md)            | MCP vs Agents vs Tools vs Skills deep-dive         |
 | [MCP Server](mcp-server/README.md)                  | Server setup, storage layout, and available tools  |
-| [Claude Code Capabilities](docs/CLAUDE_CODE_CAPABILITIES.md) | Reference of built-in harness tools (and gaps the MCP fills) |
 | [Agent Rules](rules/devops-agent-rules.md)          | Behavioral guardrails                              |
 
 ## License

@@ -30,8 +30,8 @@ A quick, practical guide to understanding and extending this toolkit.
 │                    YOUR SKILLS                              │
 │                                                            │
 │  skills/devops/aws-eks-updater/                            │
-│  skills/security/iam-auditor/                              │
-│  skills/data/schema-validator/                             │
+│  skills/devops/github-actions-writer/                      │
+│  skills/meta/agent-toolkit/                                │
 │    SKILL.md          ← Agent reads this, follows phases    │
 │    tools/            ← Scripts exposed via MCP             │
 │    references/       ← Exposed as MCP resources            │
@@ -146,10 +146,10 @@ Tools are namespaced by category with double underscores:
 ```
 
 Examples:
-- `devops__eks_inventory_addons`
-- `devops__aks_scan_terraform`
-- `security__audit_iam_policy`
-- `data__validate_schema`
+- `devops__eks_list_addons`
+- `devops__aks_find_terraform`
+- `devops__gha_list_workflows`
+- `meta__scaffold_skill`
 
 ---
 
