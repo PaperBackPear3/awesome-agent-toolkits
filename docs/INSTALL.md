@@ -22,6 +22,15 @@ One command gives your agent the bundled skills with no manual config.
 /plugin install devops-core@awesome-agent-toolkits
 ```
 
+Other plugins published in the same marketplace:
+
+```bash
+/plugin install github-actions-writer@awesome-agent-toolkits
+/plugin install harness-addons@awesome-agent-toolkits
+/plugin install post-work-checks@awesome-agent-toolkits
+/plugin install plugin-factory@awesome-agent-toolkits
+```
+
 **Codex**
 
 ```bash
@@ -127,6 +136,9 @@ After installing skills, test by asking your agent:
 
 - *"Help me update my EKS cluster"* → should trigger `aws-eks-updater`
 - *"Update my AKS cluster"* → should trigger `azure-aks-updater`
+- *"Create a GitHub Actions workflow for ..."* → should trigger `github-actions-writer`
+- *"Save this as a note / add a todo"* → should trigger `agent-toolkit`
+- *"Run post-work checks"* → should trigger `post-work-checks`
 
 ---
 
