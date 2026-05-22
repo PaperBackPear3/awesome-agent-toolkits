@@ -18,7 +18,7 @@ from storage import (
 )
 
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 
 # Single connection and write lock — sqlite WAL handles concurrent reads,
 # writes are serialized via this lock to avoid "database is locked" under
@@ -87,12 +87,43 @@ CREATE TABLE IF NOT EXISTS todos (
     tags TEXT NOT NULL DEFAULT '[]',
     blockers TEXT NOT NULL DEFAULT '[]',
     notes TEXT NOT NULL DEFAULT '',
+    locked INTEGER NOT NULL DEFAULT 0,
     created TEXT NOT NULL,
     updated TEXT NOT NULL,
     completed TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_todos_project ON todos(project);
 CREATE INDEX IF NOT EXISTS idx_todos_status ON todos(status);
+
+CREATE TABLE IF NOT EXISTS todo_comments (
+    id TEXT PRIMARY KEY,
+    todo_id TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created TEXT NOT NULL,
+    updated TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_todo_comments_todo_id ON todo_comments(todo_id);
+
+CREATE TABLE IF NOT EXISTS idle_watches (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    mode TEXT NOT NULL DEFAULT 'all',
+    todo_ids TEXT NOT NULL DEFAULT '[]',
+    message TEXT NOT NULL DEFAULT '',
+    fired INTEGER NOT NULL DEFAULT 0,
+    created TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS prompt_templates (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL DEFAULT '',
+    template TEXT NOT NULL,
+    variables TEXT NOT NULL DEFAULT '[]',
+    tags TEXT NOT NULL DEFAULT '[]',
+    created TEXT NOT NULL,
+    updated TEXT NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS timers (
     id TEXT PRIMARY KEY,
@@ -125,10 +156,18 @@ CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
 """
 
 
+def _run_column_migrations(conn: sqlite3.Connection) -> None:
+    """Add columns that were introduced after the initial schema (idempotent)."""
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(todos)").fetchall()}
+    if "locked" not in existing:
+        conn.execute("ALTER TABLE todos ADD COLUMN locked INTEGER NOT NULL DEFAULT 0")
+
+
 def init_db() -> None:
     conn = get_conn()
     with _lock:
         conn.executescript(_SCHEMA_SQL)
+        _run_column_migrations(conn)
 
 
 def _current_schema_version(conn: sqlite3.Connection) -> int:
