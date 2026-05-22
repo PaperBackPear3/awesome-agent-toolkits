@@ -1,15 +1,8 @@
 ---
 name: aws-eks-updater
 description: >
-  Updates an AWS EKS cluster safely, one component at a time. Inventories Terraform definitions,
-  managed add-ons, and Helm releases; scans changelogs for breaking changes; edits files locally
-  without committing, pushing, or applying.
-  Use when upgrading an EKS cluster, Kubernetes version, add-ons (vpc-cni, coredns, kube-proxy,
-  ebs-csi, efs-csi, pod-identity-agent, adot, cloudwatch-observability), or Helm releases —
-  even without "EKS" when context (eksctl, aws-auth, aws_eks_*) is clear.
-  Do NOT use for AKS/GKE clusters (use the matching updater), provisioning new EKS clusters,
-  day-2 cluster troubleshooting unrelated to upgrades, or pure kubectl / application Helm
-  changes that don't involve a version bump.
+  Use this skill whenever an EKS cluster version, Kubernetes version, or any cluster component needs to be bumped — including managed add-ons (vpc-cni, coredns, kube-proxy, ebs-csi, efs-csi, pod-identity-agent, adot, cloudwatch-observability) and Helm releases. Trigger even on vague upgrade intent: "update my cluster", "bump k8s version", "upgrade coredns", "new EKS release is out", or any time the user pastes Terraform with aws_eks_*, an eksctl config, or a helmfile/Chart.yaml and asks what needs changing. The skill inventories Terraform definitions, managed add-ons, and Helm releases; scans changelogs for breaking changes; and edits files locally — safely, one component at a time, without committing, pushing, or applying.
+
 version: 1
 requires_tools:
   - devops__eks_list_addons
