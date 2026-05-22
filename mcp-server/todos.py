@@ -20,6 +20,7 @@ def _row_to_dict(row) -> dict[str, Any]:
         "tags": db.unpack_list(row["tags"]),
         "blockers": db.unpack_list(row["blockers"]),
         "notes": row["notes"],
+        "locked": bool(row["locked"]),
         "created": row["created"],
         "updated": row["updated"],
         "completed": row["completed"],
@@ -29,6 +30,12 @@ def _row_to_dict(row) -> dict[str, Any]:
 def _get(tid: str) -> dict[str, Any] | None:
     row = db.get_conn().execute("SELECT * FROM todos WHERE id = ?", (tid,)).fetchone()
     return _row_to_dict(row) if row else None
+
+
+def _guard_locked(t: dict[str, Any]) -> str | None:
+    if t.get("locked"):
+        return err("locked", f"Todo '{t['id']}' is locked. Unlock it first.")
+    return None
 
 
 def register(server) -> int:
@@ -46,13 +53,13 @@ def register(server) -> int:
         proj = project or "_global"
         with db.write_lock():
             db.get_conn().execute(
-                "INSERT INTO todos(id, text, status, project, tags, blockers, notes, created, updated, completed) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO todos(id, text, status, project, tags, blockers, notes, locked, created, updated, completed) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     tid, text, "open", proj,
                     db.pack_list(parse_tag_list(tags)),
                     db.pack_list(parse_tag_list(blockers)),
-                    "", now, now, None,
+                    "", 0, now, now, None,
                 ),
             )
         return ok({"id": tid})
@@ -99,6 +106,8 @@ def register(server) -> int:
         t = _get(id)
         if not t:
             return err("not_found", f"Todo '{id}' not found.")
+        if e := _guard_locked(t):
+            return e
         if status and status not in _VALID_STATUS:
             return err("invalid_status", f"status must be one of {sorted(_VALID_STATUS)}")
         if project:
@@ -133,8 +142,11 @@ def register(server) -> int:
     @server.tool()
     def todo_delete(id: str) -> str:
         """Delete a todo."""
-        if _get(id) is None:
+        t = _get(id)
+        if t is None:
             return err("not_found", f"Todo '{id}' not found.")
+        if e := _guard_locked(t):
+            return e
         with db.write_lock():
             db.get_conn().execute("DELETE FROM todos WHERE id = ?", (id,))
         return ok({"deleted": id})
@@ -173,13 +185,153 @@ def register(server) -> int:
         """Remove a blocker from a todo."""
         return _blocker_op(id, blocker_id, add=False)
 
-    return 11
+    # ── Advanced todo tools ────────────────────────────────────────────────
+
+    @server.tool()
+    def todo_lock(id: str) -> str:
+        """Lock a todo to prevent any modifications or deletion."""
+        t = _get(id)
+        if not t:
+            return err("not_found", f"Todo '{id}' not found.")
+        with db.write_lock():
+            db.get_conn().execute(
+                "UPDATE todos SET locked = 1, updated = ? WHERE id = ?",
+                (now_iso(), id),
+            )
+        return ok(_get(id))
+
+    @server.tool()
+    def todo_unlock(id: str) -> str:
+        """Unlock a previously locked todo, allowing modifications again."""
+        t = _get(id)
+        if not t:
+            return err("not_found", f"Todo '{id}' not found.")
+        with db.write_lock():
+            db.get_conn().execute(
+                "UPDATE todos SET locked = 0, updated = ? WHERE id = ?",
+                (now_iso(), id),
+            )
+        return ok(_get(id))
+
+    @server.tool()
+    def todo_transfer(ids: str, target_project: str) -> str:
+        """Bulk-move one or more todos to a different project.
+        ids: comma-separated todo ids.
+        target_project: registered project name, or '' for the global scope.
+        """
+        if not ids.strip():
+            return err("missing_arg", "ids required")
+        okp, e = validate_project(target_project)
+        if not okp:
+            return e
+        proj = target_project or "_global"
+        id_list = [i.strip() for i in ids.split(",") if i.strip()]
+        moved: list[str] = []
+        not_found: list[str] = []
+        locked_ids: list[str] = []
+        now = now_iso()
+        with db.write_lock():
+            for tid in id_list:
+                t = _get(tid)
+                if t is None:
+                    not_found.append(tid)
+                    continue
+                if t.get("locked"):
+                    locked_ids.append(tid)
+                    continue
+                db.get_conn().execute(
+                    "UPDATE todos SET project = ?, updated = ? WHERE id = ?",
+                    (proj, now, tid),
+                )
+                moved.append(tid)
+        return ok({"moved": moved, "not_found": not_found, "locked": locked_ids, "target_project": proj})
+
+    @server.tool()
+    def todo_set_blockers(id: str, blockers: str) -> str:
+        """Replace the entire blocker list for a todo at once.
+        blockers: comma-separated todo ids; pass '' to clear all blockers.
+        """
+        t = _get(id)
+        if not t:
+            return err("not_found", f"Todo '{id}' not found.")
+        if e := _guard_locked(t):
+            return e
+        new_blockers = parse_tag_list(blockers)
+        with db.write_lock():
+            db.get_conn().execute(
+                "UPDATE todos SET blockers = ?, updated = ? WHERE id = ?",
+                (db.pack_list(sorted(new_blockers)), now_iso(), id),
+            )
+        return ok(_get(id))
+
+    @server.tool()
+    def todo_comment_add(todo_id: str, body: str) -> str:
+        """Add a comment to a todo. Returns the new comment."""
+        if not _get(todo_id):
+            return err("not_found", f"Todo '{todo_id}' not found.")
+        if not body.strip():
+            return err("missing_arg", "body required")
+        cid = uuid.uuid4().hex
+        now = now_iso()
+        with db.write_lock():
+            db.get_conn().execute(
+                "INSERT INTO todo_comments(id, todo_id, body, created, updated) VALUES (?,?,?,?,?)",
+                (cid, todo_id, body, now, now),
+            )
+        row = db.get_conn().execute("SELECT * FROM todo_comments WHERE id = ?", (cid,)).fetchone()
+        return ok(dict(row))
+
+    @server.tool()
+    def todo_comment_list(todo_id: str) -> str:
+        """List all comments for a todo, ordered by creation time."""
+        if not _get(todo_id):
+            return err("not_found", f"Todo '{todo_id}' not found.")
+        rows = db.get_conn().execute(
+            "SELECT * FROM todo_comments WHERE todo_id = ? ORDER BY created",
+            (todo_id,),
+        ).fetchall()
+        items = [dict(r) for r in rows]
+        return ok({"count": len(items), "items": items})
+
+    @server.tool()
+    def todo_comment_edit(comment_id: str, body: str) -> str:
+        """Edit the body of an existing comment."""
+        if not body.strip():
+            return err("missing_arg", "body required")
+        row = db.get_conn().execute(
+            "SELECT * FROM todo_comments WHERE id = ?", (comment_id,)
+        ).fetchone()
+        if not row:
+            return err("not_found", f"Comment '{comment_id}' not found.")
+        with db.write_lock():
+            db.get_conn().execute(
+                "UPDATE todo_comments SET body = ?, updated = ? WHERE id = ?",
+                (body, now_iso(), comment_id),
+            )
+        row = db.get_conn().execute("SELECT * FROM todo_comments WHERE id = ?", (comment_id,)).fetchone()
+        return ok(dict(row))
+
+    @server.tool()
+    def todo_comment_delete(comment_id: str) -> str:
+        """Delete a comment."""
+        row = db.get_conn().execute(
+            "SELECT 1 FROM todo_comments WHERE id = ?", (comment_id,)
+        ).fetchone()
+        if not row:
+            return err("not_found", f"Comment '{comment_id}' not found.")
+        with db.write_lock():
+            db.get_conn().execute("DELETE FROM todo_comments WHERE id = ?", (comment_id,))
+        return ok({"deleted": comment_id})
+
+    return 19
 
 
 def _set_status(tid: str, status: str) -> str:
     t = _get(tid)
     if not t:
         return err("not_found", f"Todo '{tid}' not found.")
+    if e := _guard_locked(t):
+        return e
     with db.write_lock():
         db.get_conn().execute(
             "UPDATE todos SET status=?, completed=?, updated=? WHERE id=?",
@@ -192,6 +344,8 @@ def _tag_op(tid: str, tag: str, add: bool) -> str:
     t = _get(tid)
     if not t:
         return err("not_found", f"Todo '{tid}' not found.")
+    if e := _guard_locked(t):
+        return e
     cur = set(t["tags"])
     if add:
         cur.add(tag)
@@ -209,6 +363,8 @@ def _blocker_op(tid: str, blocker_id: str, add: bool) -> str:
     t = _get(tid)
     if not t:
         return err("not_found", f"Todo '{tid}' not found.")
+    if e := _guard_locked(t):
+        return e
     cur = set(t["blockers"])
     if add:
         cur.add(blocker_id)
