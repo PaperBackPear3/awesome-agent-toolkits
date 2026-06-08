@@ -55,10 +55,10 @@ export function PlanView({ data, app }: PlanViewProps) {
   const handleConfirm = async () => {
     setConfirming(true);
     try {
-      await app.callServerTool("eks_confirm_plan", {
+      await app.callServerTool({ name: "eks_confirm_plan", arguments: {
         approved: approvedList,
         skipped: skippedList,
-      });
+      } });
       setConfirmed({ approved: approvedList, skipped: skippedList });
     } catch {
       // Keep UI open so user can retry

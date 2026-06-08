@@ -479,11 +479,9 @@ registerAppTool(
 
 registerAppResource(
   server,
-  {
-    uri: RESOURCE_URI,
-    name: "EKS Updater UI",
-    mimeType: RESOURCE_MIME_TYPE,
-  },
+  "EKS Updater UI",
+  RESOURCE_URI,
+  undefined,
   async () => {
     const html = readFileSync(
       resolve(__dirname, "dist", "mcp-app.html"),

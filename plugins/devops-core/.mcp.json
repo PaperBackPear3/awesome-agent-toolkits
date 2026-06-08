@@ -3,7 +3,7 @@
     "devops-core": {
       "command": "npx",
       "args": ["tsx", "server.ts"],
-      "cwd": "./plugins/devops-core/server"
+      "cwd": "./server"
     }
   }
 }

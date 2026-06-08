@@ -34,7 +34,7 @@ export function SetupView({ data, app }: SetupViewProps) {
   useEffect(() => {
     if (profiles.length === 0) {
       app
-        .callServerTool("eks_list_profiles", {})
+        .callServerTool({ name: "eks_list_profiles", arguments: {} })
         .then((r) => {
           const c = r.structuredContent as { profiles?: string[] };
           if (c?.profiles?.length) {
@@ -55,7 +55,7 @@ export function SetupView({ data, app }: SetupViewProps) {
     setLoadingIdentity(true);
     setIdentity(null);
     app
-      .callServerTool("eks_get_identity", { profile: selectedProfile })
+      .callServerTool({ name: "eks_get_identity", arguments: { profile: selectedProfile } })
       .then((r) => setIdentity(r.structuredContent as AwsIdentity))
       .catch(() => setIdentity({ error: "Could not retrieve identity" }))
       .finally(() => setLoadingIdentity(false));
@@ -64,7 +64,7 @@ export function SetupView({ data, app }: SetupViewProps) {
   const loadContexts = async () => {
     setLoadingContexts(true);
     try {
-      const r = await app.callServerTool("eks_list_contexts", {});
+      const r = await app.callServerTool({ name: "eks_list_contexts", arguments: {} });
       const c = r.structuredContent as { contexts?: KubeContext[]; currentContext?: string };
       setContexts(c?.contexts ?? []);
       if (!selectedContext && c?.currentContext) setSelectedContext(c.currentContext);
@@ -80,12 +80,12 @@ export function SetupView({ data, app }: SetupViewProps) {
     setConfirming(true);
     const ctx = contexts.find((c) => c.name === selectedContext);
     try {
-      await app.callServerTool("eks_confirm_context", {
+      await app.callServerTool({ name: "eks_confirm_context", arguments: {
         cluster_name: ctx?.cluster ?? selectedContext,
         profile: selectedProfile || undefined,
         kube_context: selectedContext || undefined,
         tf_root: tfRoot || undefined,
-      });
+      } });
       setConfirmed(true);
     } catch {
       // show error but don't block
