@@ -1,0 +1,28 @@
+{
+  "name": "devops-core-mcp",
+  "version": "1.0.0",
+  "description": "MCP App server for EKS/AKS cluster upgrade workflows",
+  "type": "module",
+  "scripts": {
+    "build:ui": "vite build",
+    "build:server": "tsc --project tsconfig.server.json",
+    "build": "npm run build:ui && npm run build:server",
+    "dev": "npx tsx server.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "latest",
+    "@modelcontextprotocol/sdk": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@vitejs/plugin-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "vite-plugin-singlefile": "latest"
+  }
+}

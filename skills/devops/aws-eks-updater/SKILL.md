@@ -3,7 +3,7 @@ name: aws-eks-updater
 description: >
   Use this skill whenever an EKS cluster version, Kubernetes version, or any cluster component needs to be bumped — including managed add-ons (vpc-cni, coredns, kube-proxy, ebs-csi, efs-csi, pod-identity-agent, adot, cloudwatch-observability) and Helm releases. Trigger even on vague upgrade intent: "update my cluster", "bump k8s version", "upgrade coredns", "new EKS release is out", or any time the user pastes Terraform with aws_eks_*, an eksctl config, or a helmfile/Chart.yaml and asks what needs changing. The skill inventories Terraform definitions, managed add-ons, and Helm releases; scans changelogs for breaking changes; and edits files locally — safely, one component at a time, without committing, pushing, or applying.
 
-version: 1
+version: 2
 requires_tools:
   - devops__eks_list_addons
   - devops__eks_find_terraform
@@ -12,6 +12,7 @@ requires_tools:
 requires_mcp:
   - terraform
   - github
+  - devops-core
 tags: [aws, eks, kubernetes, terraform, helm]
 ---
 
@@ -54,7 +55,12 @@ scripts.
 
 ## PHASE 1 — Context
 
-Ask only for what cannot be detected.
+**If the `devops-core` MCP is available**, call `mcp__devops-core__eks_setup` first. The tool opens
+an interactive wizard in the UI where the user can select their AWS profile, kubeconfig context,
+and optionally specify the Terraform root. It returns a confirmed context block via the app-only
+tool `eks_confirm_context`. Wait for that tool result before proceeding.
+
+**If `devops-core` MCP is not available**, collect context through text:
 
 - **Working directory**: confirm the user is in (or provide a path to) the repo holding their
   EKS Terraform + Kubernetes manifests. If absent, ask.
@@ -130,6 +136,10 @@ namespace, chart, app version, status, updated, revision.
 - Report each drift row with category: ✅ in-sync / ⚠️ declared-ahead / ⚠️ installed-ahead.
 
 Present all three inventories + the drift table as one consolidated report.
+
+**If the `devops-core` MCP is available**, call `mcp__devops-core__eks_inventory` with the
+cluster context, drift rows, add-on list, and Helm release list. The interactive UI renders
+color-coded tables with tab navigation.
 
 ---
 
@@ -215,7 +225,15 @@ For each step show:
 
 ### 4.1 Generate the plan report
 
-Persist as a standalone HTML artifact:
+**If the `devops-core` MCP is available**, call `mcp__devops-core__eks_plan` with the cluster
+context, decisions, plan, and blocked arrays. This opens an interactive checklist in the UI where
+the user can approve or skip each item. The UI calls `eks_confirm_plan` when done — wait for that
+tool result before proceeding to Phase 5. Use only the approved items list.
+
+**If `devops-core` MCP is not available**, present the plan in text and ask the user for explicit
+confirmation before executing.
+
+Persist as a standalone HTML artifact (in addition to the interactive UI):
 
 ```
 python3 tools/generate_report.py plan <cwd>/eks-update-plan-<cluster>-<YYYY-MM-DD>.html
@@ -244,17 +262,13 @@ do not move on.
 
 ## PHASE 6 — Final summary
 
-After all items addressed, print:
+After all items addressed, print the summary table in text. Then:
 
-| Package | Source                   | Old   | New   | Status                                             |
-| ------- | ------------------------ | ----- | ----- | -------------------------------------------------- |
-| ...     | terraform / addon / helm | x.y.z | x.y.z | ✅ updated / ⏭️ skipped / 🔴 blocked / 🔍 deferred |
+**If the `devops-core` MCP is available**, call `mcp__devops-core__eks_inventory` with the final
+results to show the interactive inventory one more time (for confirmation), then call
+`mcp__devops-core__eks_summary` with the results and deferred majors for the visual summary.
 
-Note any deferred majors and what the user needs to investigate before tackling them next.
-
-### 6.1 Generate the summary report
-
-Persist the final results as HTML:
+**In all cases**, persist the results as HTML:
 
 ```
 python3 tools/generate_report.py summary <cwd>/eks-update-summary-<cluster>-<YYYY-MM-DD>.html
@@ -262,6 +276,12 @@ python3 tools/generate_report.py summary <cwd>/eks-update-summary-<cluster>-<YYY
 
 Pipe JSON (schema: cluster, results, deferred_majors) from Phase 5 outcomes. Keep both
 the plan and summary — they document intent vs. what shipped.
+
+Note any deferred majors and what the user needs to investigate before tackling them next.
+
+| Package | Source                   | Old   | New   | Status                                             |
+| ------- | ------------------------ | ----- | ----- | -------------------------------------------------- |
+| ...     | terraform / addon / helm | x.y.z | x.y.z | ✅ updated / ⏭️ skipped / 🔴 blocked / 🔍 deferred |
 
 ---
 
@@ -275,3 +295,14 @@ the plan and summary — they document intent vs. what shipped.
 - `references/breaking-change-keywords.md` — keywords for changelog scanning
 - `references/eks-compatibility.md` — AWS docs for EKS/add-on K8s version support
 - `agents/changelog-researcher.md` — subagent for parallel changelog fetching
+
+## MCP App tools (devops-core MCP server)
+
+These tools require the `devops-core` MCP server (see `plugins/devops-core/server/`).
+
+| Tool | Phase | Purpose |
+| ---- | ----- | ------- |
+| `eks_setup` | Phase 1 | Interactive wizard: select AWS profile, kubeconfig context, confirm cluster |
+| `eks_inventory` | Phase 2 | Tabbed display of drift, add-ons, Helm releases |
+| `eks_plan` | Phase 4 | Interactive approve/skip checklist; calls `eks_confirm_plan` on submit |
+| `eks_summary` | Phase 6 | Stat cards + results table for the final upgrade summary |
