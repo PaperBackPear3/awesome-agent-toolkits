@@ -5,11 +5,10 @@
   "type": "module",
   "scripts": {
     "build:ui": "vite build",
-    "build:server": "tsc --project tsconfig.server.json",
+    "build:server": "esbuild server.ts --bundle --platform=node --format=esm --outfile=bundle.mjs",
     "build": "npm run build:ui && npm run build:server",
-    "postinstall": "npm run build:ui",
     "dev": "npx tsx server.ts",
-    "start": "node dist-server/server.js"
+    "start": "node bundle.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "latest",
@@ -21,6 +20,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "latest",
+    "esbuild": "^0.28.0",
     "react": "latest",
     "react-dom": "latest",
     "typescript": "latest",
