@@ -481,7 +481,7 @@ registerAppResource(
   server,
   "EKS Updater UI",
   RESOURCE_URI,
-  undefined,
+  { description: "Interactive EKS upgrade UI" },
   async () => {
     const html = readFileSync(
       resolve(__dirname, "dist", "mcp-app.html"),

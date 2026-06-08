@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "devops-core": {
-      "command": "npx",
-      "args": ["tsx", "server.ts"],
+      "command": "sh",
+      "args": ["-c", "npm install --silent 2>/dev/null; npx tsx server.ts"],
       "cwd": "./server"
     }
   }

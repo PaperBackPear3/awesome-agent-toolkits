@@ -5,6 +5,9 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+# Allow committed MCP App build artifacts
+!plugins/*/server/dist/
+!plugins/*/server/dist/*.html
 
 # Virtual environments
 .venv/
