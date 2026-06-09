@@ -1,2 +1,5 @@
 node_modules/
+dist/
+bundle.mjs
 dist-server/
+*.log

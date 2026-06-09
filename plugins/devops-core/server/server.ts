@@ -13,6 +13,16 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// ── Logging (stderr only — stdout is reserved for MCP JSON) ──────────────────
+
+function log(level: "info" | "warn" | "error", message: string, data?: unknown) {
+  const ts = new Date().toISOString();
+  const line = data !== undefined
+    ? `[devops-core] ${ts} ${level.toUpperCase()} ${message} ${JSON.stringify(data)}`
+    : `[devops-core] ${ts} ${level.toUpperCase()} ${message}`;
+  process.stderr.write(line + "\n");
+}
+
 const server = new McpServer({ name: "devops-core", version: "1.0.0" });
 
 const RESOURCE_URI = "ui://eks-updater/mcp-app.html";
@@ -102,7 +112,9 @@ function safeExec(cmd: string): { ok: boolean; output: string } {
     const out = execSync(cmd, { encoding: "utf-8", timeout: 15_000 }).trim();
     return { ok: true, output: out };
   } catch (err: unknown) {
-    return { ok: false, output: err instanceof Error ? err.message : String(err) };
+    const output = err instanceof Error ? err.message : String(err);
+    log("warn", `exec failed: ${cmd.split(" ")[0]}`, { cmd, error: output.slice(0, 200) });
+    return { ok: false, output };
   }
 }
 
@@ -127,6 +139,7 @@ registerAppTool(
     _meta: { ui: { resourceUri: RESOURCE_URI } },
   },
   async (args) => {
+    log("info", "tool:eks_setup", { profile: args.profile });
     const profilesResult = safeExec("aws configure list-profiles");
     const profiles = profilesResult.ok
       ? profilesResult.output.split("\n").filter(Boolean)
@@ -184,6 +197,7 @@ registerAppTool(
     _meta: { ui: { resourceUri: RESOURCE_URI } },
   },
   async (args) => {
+    log("info", "tool:eks_inventory", { cluster: args.cluster.name });
     const drift = args.drift ?? [];
     const addons = args.addons ?? [];
     const helm = args.helm_releases ?? [];
@@ -232,6 +246,7 @@ registerAppTool(
     _meta: { ui: { resourceUri: RESOURCE_URI } },
   },
   async (args) => {
+    log("info", "tool:eks_plan", { cluster: args.cluster.name, items: args.plan?.length ?? 0 });
     const plan = args.plan ?? [];
     const blocked = args.blocked ?? [];
 
@@ -276,6 +291,7 @@ registerAppTool(
     _meta: { ui: { resourceUri: RESOURCE_URI } },
   },
   async (args) => {
+    log("info", "tool:eks_summary", { cluster: args.cluster.name });
     const results = args.results ?? [];
     const counts = { updated: 0, skipped: 0, deferred: 0, blocked: 0 };
     for (const r of results) {
@@ -483,6 +499,7 @@ registerAppResource(
   RESOURCE_URI,
   { description: "Interactive EKS upgrade UI" },
   async () => {
+    log("info", "resource:read", { uri: RESOURCE_URI });
     const html = readFileSync(
       resolve(__dirname, "dist", "mcp-app.html"),
       "utf-8",
@@ -495,5 +512,7 @@ registerAppResource(
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
+log("info", "server starting", { version: "1.0.0" });
 const transport = new StdioServerTransport();
 await server.connect(transport);
+log("info", "server connected");

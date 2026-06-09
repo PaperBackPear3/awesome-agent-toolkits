@@ -1,0 +1,14 @@
+services:
+  mcp-server:
+    build:
+      context: .
+      target: dev
+    volumes:
+      - ./src:/app/src:ro
+      - ./server.ts:/app/server.ts:ro
+      - ./mcp-app.html:/app/mcp-app.html:ro
+      - ${HOME}/.aws:/root/.aws:ro
+      - ${HOME}/.kube:/root/.kube:ro
+    stdin_open: true
+    environment:
+      - NODE_ENV=development

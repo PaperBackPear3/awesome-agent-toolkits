@@ -1,0 +1,43 @@
+#!/bin/sh
+# Plugin launcher for devops-core-mcp.
+# - Dev:  if server/bundle.mjs exists locally (plugin developer), runs it directly.
+# - Prod: otherwise fetches the published npm package via npx (end users).
+#
+# Claude Code adds this plugin's bin/ dir to PATH, so $0 is always an absolute
+# path — we use it to locate the plugin root regardless of working directory.
+
+PLUGIN_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+LOCAL_BUNDLE="$PLUGIN_DIR/server/bundle.mjs"
+
+# Locate node across common install methods (Homebrew, NVM, Volta, system)
+NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+NVM_LATEST=""
+if [ -d "$NVM_DIR/versions/node" ]; then
+  NVM_LATEST="$NVM_DIR/versions/node/$(ls "$NVM_DIR/versions/node" 2>/dev/null | sort -V | tail -1)/bin"
+fi
+
+NODE_BIN=""
+for dir in \
+  /opt/homebrew/bin \
+  /usr/local/bin \
+  "$HOME/.volta/bin" \
+  $NVM_LATEST \
+  /usr/bin; do
+  if [ -n "$dir" ] && [ -x "$dir/node" ]; then
+    NODE_BIN="$dir"
+    break
+  fi
+done
+
+if [ -z "$NODE_BIN" ]; then
+  echo "ERROR: node not found. Install via Homebrew (brew install node) or see https://nodejs.org" >&2
+  exit 1
+fi
+
+if [ -f "$LOCAL_BUNDLE" ]; then
+  # Developer mode: run the locally built bundle
+  exec "$NODE_BIN/node" "$LOCAL_BUNDLE"
+else
+  # Production mode: download and run from npm
+  exec "$NODE_BIN/npx" --yes devops-core-mcp
+fi

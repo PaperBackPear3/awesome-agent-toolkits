@@ -1,0 +1,11 @@
+src/
+node_modules/
+server.ts
+mcp-app.html
+tsconfig.json
+tsconfig.server.json
+vite.config.ts
+Dockerfile
+docker-compose.yml
+start.sh
+*.log
