@@ -81,7 +81,7 @@ Example:
   "interface": {
     "displayName": "DevOps Core",
     "shortDescription": "Kubernetes cluster update skills with MCP tools",
-    "longDescription": "Safety-first skills for updating AWS EKS and Azure AKS clusters.",
+    "longDescription": "Author, update, and migrate GitHub Actions workflows, including multi-environment release pipelines.",
     "developerName": "PaperBackPear3",
     "category": "DevOps",
     "capabilities": ["Read"]
