@@ -2,54 +2,6 @@
   "version": "1.0.0",
   "skills": [
     {
-      "name": "aws-eks-updater",
-      "category": "devops",
-      "version": 1,
-      "path": "devops/aws-eks-updater",
-      "description": "Interactive, safety-first skill for updating an AWS EKS cluster.",
-      "requires_tools": [
-        "devops__eks_list_addons",
-        "devops__eks_find_terraform",
-        "devops__eks_helm_list_releases",
-        "devops__eks_verify_environment"
-      ],
-      "requires_mcp": [
-        "terraform",
-        "github"
-      ],
-      "tags": [
-        "aws",
-        "eks",
-        "kubernetes",
-        "terraform",
-        "helm"
-      ]
-    },
-    {
-      "name": "azure-aks-updater",
-      "category": "devops",
-      "version": 1,
-      "path": "devops/azure-aks-updater",
-      "description": "Interactive, safety-first skill for updating an Azure AKS cluster.",
-      "requires_tools": [
-        "devops__aks_list_addons",
-        "devops__aks_find_terraform",
-        "devops__aks_helm_list_releases",
-        "devops__aks_verify_environment"
-      ],
-      "requires_mcp": [
-        "terraform",
-        "github"
-      ],
-      "tags": [
-        "azure",
-        "aks",
-        "kubernetes",
-        "terraform",
-        "helm"
-      ]
-    },
-    {
       "name": "github-actions-writer",
       "category": "devops",
       "version": 1,

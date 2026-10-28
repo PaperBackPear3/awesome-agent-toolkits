@@ -6,15 +6,13 @@ Agent skills are self-contained instruction packages that AI coding agents load 
 
 | Category | Skill | Description |
 |----------|-------|-------------|
-| DevOps | `aws-eks-updater` | Interactive, safety-first EKS cluster upgrades |
-| DevOps | `azure-aks-updater` | Interactive, safety-first AKS cluster upgrades |
 
 ## How to Use
 
 ### Method 1: Plugin Install (Claude Code)
 
 ```bash
-claude plugin add github:PaperBackPear3/awesome-agent-toolkits/plugins/devops-core
+claude plugin add github:PaperBackPear3/awesome-agent-toolkits/plugins/github-actions-writer
 ```
 
 ### Method 2: Local Copy

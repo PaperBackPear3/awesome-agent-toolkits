@@ -165,6 +165,5 @@ Files in `references/` are auto-exposed as MCP resources:
 
 Reference these existing skills for patterns:
 
-- `skills/devops/aws-eks-updater/` — comprehensive multi-phase skill with tools, references, and sub-agents
-- `skills/devops/azure-aks-updater/` — similar structure adapted for a different cloud provider
+- `skills/devops/github-actions-writer/` — multi-phase devops skill with references
 - `skills/meta/plugin-factory/` — meta skill that creates other skills/plugins

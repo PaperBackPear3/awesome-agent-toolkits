@@ -12,7 +12,7 @@ Add the marketplace, then install one or more plugins:
 
 ```bash
 /plugin marketplace add PaperBackPear3/awesome-agent-toolkits
-/plugin install devops-core@awesome-agent-toolkits
+/plugin install github-actions-writer@awesome-agent-toolkits
 ```
 
 Browse everything available:
@@ -26,7 +26,7 @@ Browse everything available:
 ```json
 {
   "plugins": [
-    "github:PaperBackPear3/awesome-agent-toolkits/plugins/devops-core"
+    "github:PaperBackPear3/awesome-agent-toolkits/plugins/github-actions-writer"
   ]
 }
 ```
@@ -36,7 +36,7 @@ Browse everything available:
 Copy a skill into your agent's skill directory:
 
 ```bash
-cp -r skills/devops/aws-eks-updater ~/.claude/skills/
+cp -r skills/devops/github-actions-writer ~/.claude/skills/
 ```
 
 Or point your agent at the Agent Toolkit MCP server to augment its harness with persistent notes, todos, timers, and a cross-project registry:
@@ -58,7 +58,6 @@ Or point your agent at the Agent Toolkit MCP server to augment its harness with 
 
 | Plugin                  | Category     | Description                                                                                    |
 | ----------------------- | ------------ | ---------------------------------------------------------------------------------------------- |
-| `devops-core`           | DevOps       | Kubernetes cluster update skills (EKS + AKS) with MCP tools                                    |
 | `github-actions-writer` | DevOps       | Author, update, and migrate GitHub Actions workflows with multi-environment release pipelines  |
 | `harness-addons`        | Productivity | Exposes the agent-toolkit MCP (notes, todos, timers, projects) as harness add-ons              |
 | `post-work-checks`      | Productivity | Per-project post-work todo lists that run when the agent finishes a task                       |
@@ -68,8 +67,6 @@ Or point your agent at the Agent Toolkit MCP server to augment its harness with 
 
 | Skill                                                                   | Category | Description                                                                          |
 | ----------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------ |
-| [`aws-eks-updater`](skills/devops/aws-eks-updater/SKILL.md)             | devops   | Interactive, safety-first EKS cluster upgrades                                       |
-| [`azure-aks-updater`](skills/devops/azure-aks-updater/SKILL.md)         | devops   | Interactive, safety-first AKS cluster upgrades                                       |
 | [`github-actions-writer`](skills/devops/github-actions-writer/SKILL.md) | devops   | Create, update, and migrate GitHub Actions workflows for complex release pipelines   |
 | [`agent-toolkit`](skills/meta/agent-toolkit/SKILL.md)                   | meta     | Drive the agent-toolkit MCP (notes, todos, timers, projects)                         |
 | [`plugin-factory`](skills/meta/plugin-factory/SKILL.md)                 | meta     | Scaffold and validate new plugins/skills in this repository                          |
@@ -96,7 +93,6 @@ All state lives under `~/.agent-toolkit/` (overridable via `AGENT_TOOLKIT_HOME`)
 .claude-plugin/         # Claude Code marketplace index
 .agents/plugins/        # Kiro/generic agent marketplace index
 plugins/                # Installable plugin packages
-  devops-core/            #   ├─ EKS + AKS updater skills
   github-actions-writer/  #   ├─ GitHub Actions workflow authoring
   harness-addons/         #   ├─ Wires up the agent-toolkit MCP
   plugin-factory/         #   ├─ Meta-plugin: scaffold new plugins/skills

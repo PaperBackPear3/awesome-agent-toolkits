@@ -29,7 +29,6 @@ A quick, practical guide to understanding and extending this toolkit.
 ┌────────────▼───────────────────────────────────────────────┐
 │                    YOUR SKILLS                              │
 │                                                            │
-│  skills/devops/aws-eks-updater/                            │
 │  skills/devops/github-actions-writer/                      │
 │  skills/meta/agent-toolkit/                                │
 │    SKILL.md          ← Agent reads this, follows phases    │
@@ -146,8 +145,6 @@ Tools are namespaced by category with double underscores:
 ```
 
 Examples:
-- `devops__eks_list_addons`
-- `devops__aks_find_terraform`
 - `devops__gha_list_workflows`
 - `meta__scaffold_skill`
 
@@ -161,8 +158,8 @@ skills://<category>/<skill-name>/assets/<filename>
 ```
 
 Examples:
-- `skills://devops/aws-eks-updater/references/eks-compatibility.md`
-- `skills://devops/azure-aks-updater/assets/plan_template.html`
+- `skills://devops/github-actions-writer/references/<filename>`
+- `skills://meta/plugin-factory/references/skill-writing-guide.md`
 
 ---
 

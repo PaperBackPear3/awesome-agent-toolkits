@@ -36,9 +36,9 @@ Example:
 
 ```json
 {
-  "name": "devops-core",
+  "name": "github-actions-writer",
   "version": "1.0.0",
-  "description": "Interactive, safety-first skills for updating Kubernetes clusters (EKS and AKS).",
+  "description": "Author, update, and migrate GitHub Actions workflows.",
   "author": { "name": "PaperBackPear3" },
   "homepage": "https://github.com/PaperBackPear3/awesome-agent-toolkits",
   "repository": "https://github.com/PaperBackPear3/awesome-agent-toolkits",
@@ -69,9 +69,9 @@ Example:
 
 ```json
 {
-  "name": "devops-core",
+  "name": "github-actions-writer",
   "version": "1.0.0",
-  "description": "Interactive, safety-first skills for updating Kubernetes clusters (EKS and AKS).",
+  "description": "Author, update, and migrate GitHub Actions workflows.",
   "author": { "name": "PaperBackPear3" },
   "homepage": "https://github.com/PaperBackPear3/awesome-agent-toolkits",
   "repository": "https://github.com/PaperBackPear3/awesome-agent-toolkits",
@@ -120,9 +120,8 @@ ln -s ../../../skills/<category>/<skill-name> <skill-name>
 Example:
 
 ```
-plugins/devops-core/skills/
-├── aws-eks-updater  → ../../../skills/devops/aws-eks-updater
-└── azure-aks-updater → ../../../skills/devops/azure-aks-updater
+plugins/github-actions-writer/skills/
+└── github-actions-writer → ../../../skills/devops/github-actions-writer
 ```
 
 Always use relative paths so the repo works when cloned to any location.
@@ -150,8 +149,8 @@ Both files live at the **repository root** and list all available plugins:
 {
   "plugins": [
     {
-      "name": "devops-core",
-      "path": "plugins/devops-core",
+      "name": "github-actions-writer",
+      "path": "plugins/github-actions-writer",
       "description": "..."
     }
   ]

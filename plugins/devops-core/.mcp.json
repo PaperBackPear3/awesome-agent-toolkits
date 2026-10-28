@@ -1,7 +1,0 @@
-{
-  "mcpServers": {
-    "devops-core": {
-      "command": "devops-core-mcp"
-    }
-  }
-}

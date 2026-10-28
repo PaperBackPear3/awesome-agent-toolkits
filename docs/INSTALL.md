@@ -19,13 +19,12 @@ One command gives your agent the bundled skills with no manual config.
 
 ```bash
 /plugin marketplace add PaperBackPear3/awesome-agent-toolkits
-/plugin install devops-core@awesome-agent-toolkits
+/plugin install github-actions-writer@awesome-agent-toolkits
 ```
 
 Other plugins published in the same marketplace:
 
 ```bash
-/plugin install github-actions-writer@awesome-agent-toolkits
 /plugin install harness-addons@awesome-agent-toolkits
 /plugin install post-work-checks@awesome-agent-toolkits
 /plugin install plugin-factory@awesome-agent-toolkits
@@ -35,7 +34,7 @@ Other plugins published in the same marketplace:
 
 ```bash
 codex plugin marketplace add PaperBackPear3/awesome-agent-toolkits
-# Then run /plugins in Codex to install devops-core
+# Then run /plugins in Codex to install github-actions-writer
 ```
 
 ### Option B: Manual Skill Copy
@@ -55,9 +54,9 @@ git clone https://github.com/PaperBackPear3/awesome-agent-toolkits.git ~/skills
 | Kiro | `~/.kiro/skills/` or `.kiro/skills/` (project) |
 
 ```bash
-# Example: install EKS updater for Claude Code
+# Example: install the GitHub Actions writer for Claude Code
 mkdir -p ~/.claude/skills
-cp -r ~/skills/skills/devops/aws-eks-updater ~/.claude/skills/
+cp -r ~/skills/skills/devops/github-actions-writer ~/.claude/skills/
 ```
 
 ### Option C: Symlinks (for development)
@@ -66,8 +65,7 @@ If you want to edit skills and have changes reflected immediately:
 
 ```bash
 mkdir -p ~/.claude/skills
-ln -s ~/skills/skills/devops/aws-eks-updater ~/.claude/skills/aws-eks-updater
-ln -s ~/skills/skills/devops/azure-aks-updater ~/.claude/skills/azure-aks-updater
+ln -s ~/skills/skills/devops/github-actions-writer ~/.claude/skills/github-actions-writer
 ```
 
 ---
@@ -134,8 +132,6 @@ All state is stored under `~/.agent-toolkit/` by default. Override with the
 
 After installing skills, test by asking your agent:
 
-- *"Help me update my EKS cluster"* → should trigger `aws-eks-updater`
-- *"Update my AKS cluster"* → should trigger `azure-aks-updater`
 - *"Create a GitHub Actions workflow for ..."* → should trigger `github-actions-writer`
 - *"Save this as a note / add a todo"* → should trigger `agent-toolkit`
 - *"Run post-work checks"* → should trigger `post-work-checks`
@@ -146,7 +142,7 @@ After installing skills, test by asking your agent:
 
 | What | How |
 |------|-----|
-| Plugin | `/plugin uninstall devops-core@awesome-agent-toolkits` |
+| Plugin | `/plugin uninstall <plugin>@awesome-agent-toolkits` |
 | Manual skill copy | Delete the skill directory |
 | Symlink | Remove the symlink |
 | Agent Toolkit MCP | Remove the server entry from your MCP config |

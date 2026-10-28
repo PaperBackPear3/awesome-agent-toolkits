@@ -99,7 +99,7 @@ Do NOT use for <exclusion1>, <exclusion2>, or <exclusion3>.
 
 ---
 
-## Real Example: aws-eks-updater
+## Example: an EKS upgrade skill
 
 ```yaml
 description: >

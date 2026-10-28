@@ -1,26 +1,13 @@
 {
   "name": "awesome-agent-toolkits",
   "metadata": {
-    "description": "A framework for discoverable agent skills — package business logic as composable, MCP-served capabilities",
+    "description": "A framework for discoverable agent skills \u2014 package business logic as composable, MCP-served capabilities",
     "version": "1.0.0"
   },
   "owner": {
     "name": "PaperBackPear3"
   },
   "plugins": [
-    {
-      "name": "devops-core",
-      "description": "Kubernetes cluster update skills (EKS + AKS) with MCP tools",
-      "source": "./plugins/devops-core",
-      "version": "1.0.0",
-      "category": "devops",
-      "keywords": [
-        "devops",
-        "kubernetes",
-        "eks",
-        "aks"
-      ]
-    },
     {
       "name": "harness-addons",
       "description": "Exposes the agent-toolkit MCP server (notes, todos, timers, and projects) as harness add-ons",
@@ -66,7 +53,7 @@
     },
     {
       "name": "post-work-checks",
-      "description": "Per-project post-work todo lists — define tasks the agent runs after finishing work, with always/conditional/disabled status control",
+      "description": "Per-project post-work todo lists \u2014 define tasks the agent runs after finishing work, with always/conditional/disabled status control",
       "source": "./plugins/post-work-checks",
       "version": "1.0.0",
       "category": "productivity",

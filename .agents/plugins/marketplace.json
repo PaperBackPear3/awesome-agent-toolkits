@@ -5,17 +5,6 @@
   },
   "plugins": [
     {
-      "name": "devops-core",
-      "source": {
-        "source": "local",
-        "path": "./plugins/devops-core"
-      },
-      "policy": {
-        "installation": "AVAILABLE"
-      },
-      "category": "DevOps"
-    },
-    {
       "name": "harness-addons",
       "source": {
         "source": "local",
