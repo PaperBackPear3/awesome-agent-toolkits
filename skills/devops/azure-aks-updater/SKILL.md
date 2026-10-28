@@ -10,6 +10,7 @@ description: >
   Do NOT use for EKS/GKE clusters (use the matching updater), provisioning new AKS clusters,
   day-2 cluster troubleshooting unrelated to upgrades, or pure kubectl / application Helm
   changes that don't involve a version bump.
+disable-model-invocation: true
 version: 1
 requires_tools:
   - devops__aks_list_addons

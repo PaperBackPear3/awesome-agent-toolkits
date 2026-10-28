@@ -1,71 +1,18 @@
 {
   "tools": [
     {
-      "name": "eks_list_addons",
-      "aliases": [
-        "eks_inventory_addons"
-      ],
-      "script": "inventory_addons.py",
-      "description": "List managed add-ons installed on an EKS cluster (name, version, status). Queries the AWS API and returns structured JSON.",
-      "params": [
-        {
-          "name": "cluster",
-          "flag": "--cluster",
-          "required": true,
-          "description": "EKS cluster name"
-        },
-        {
-          "name": "region",
-          "flag": "--region",
-          "required": true,
-          "description": "AWS region (e.g. us-east-1)"
-        },
-        {
-          "name": "profile",
-          "flag": "--profile",
-          "required": false,
-          "description": "AWS CLI named profile"
-        }
-      ]
-    },
-    {
       "name": "eks_find_terraform",
       "aliases": [
         "eks_scan_terraform"
       ],
       "script": "scan_terraform_eks.py",
-      "description": "Extract EKS resource declarations and Kubernetes version from Terraform files. Returns cluster config and module references found under the given directory.",
+      "description": "Extract declared EKS versions from a Terraform root: cluster version, add-ons, node groups, Helm charts (resources and module-wrapped), AMI SSM parameters pinned to a Kubernetes minor, and warnings for node group versions the module never sets, silently dropped inputs and unpinned charts. Returns JSON with file:line locations.",
       "params": [
         {
           "name": "root_dir",
           "flag": "--root-dir",
           "required": true,
-          "description": "Root directory to scan for .tf files"
-        }
-      ]
-    },
-    {
-      "name": "eks_helm_list_releases",
-      "aliases": [
-        "inventory_helm"
-      ],
-      "script": "inventory_helm.py",
-      "description": "List Helm releases deployed in the active kubeconfig context on EKS. Returns release name, namespace, chart, and installed version.",
-      "params": []
-    },
-    {
-      "name": "eks_verify_environment",
-      "aliases": [
-        "check_prereqs"
-      ],
-      "script": "check_prereqs.py",
-      "description": "Check that required CLIs (aws, kubectl, helm) are installed and AWS credentials are active. Returns a pass/fail status for each prerequisite.",
-      "params": [
-        {
-          "name": "profile",
-          "flag": "--profile",
-          "required": false,
-          "description": "AWS CLI named profile to validate"
+          "description": "Terraform root directory to scan for .tf files"
         }
       ]
     }
